@@ -3,8 +3,8 @@
 Этот бот в Telegram принимает ваши голосовые сообщения и конвертирует их с помощью rvc
 
 DEMO
-https://github.com/daswer123/tg_rvc_bot/assets/22278673/5c4b30d7-947d-43d1-baf4-f7637aabb1d6
 
+https://github.com/daswer123/tg_rvc_bot/assets/22278673/071d46ae-4a69-4c5e-8cdf-530de2694556
 
 # Гайд по установке:
 1) Создаете бота в botFather
