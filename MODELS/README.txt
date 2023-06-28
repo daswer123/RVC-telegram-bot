@@ -7,6 +7,8 @@
    -- *.jpg or *.png ( optional)
    -- *.txt ( name, description, ( male || female )
  -- Char2
+ -- default.jpg
+ -- script.py
  ***
  
  
