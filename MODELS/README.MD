@@ -3,7 +3,6 @@
 Вот как организована структура папки:
 
 ```
-.
 ├── MODELS
 │   ├── Category 1
 │   │   ├── Char1
@@ -19,10 +18,10 @@
 │   │       ├── *.txt (name, description, (male || female || child))
 │   │       └── *.mp3 (Audio sample) (optional)
 │   └── Category 2
-│       └── Char1
-│           └── ...
-└── default.jpg
-    └── ...
+│   │   └── Char1
+│   │        └── ...
+│   └─── default.jpg
+│
 ```
 
 ## Формат файла *.txt
