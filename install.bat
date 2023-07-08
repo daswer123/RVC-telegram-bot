@@ -7,9 +7,9 @@ python -m venv venv
 call venv/Scripts/activate
 
 cd audio_separator
-echo Установка Pythoch для audio_separator 
+echo Установка Pythoch для audio_separator
 python ../../utils/install_pytorch.py
-echo Установка зависимостей для audio_separator 
+echo Установка зависимостей для audio_separator
 pip install -r requirements.txt
 
 cd ..
