@@ -13,6 +13,7 @@ https://github.com/daswer123/tg_rvc_bot/assets/22278673/80639ac0-76b2-4942-a45a-
 3) Возможность тонко настроить преобразование голоса
 
 # Гайд по установке:
+0) Убедитесь что у вас установленны: [Python 3.10.x](https://www.python.org/downloads/release/python-3109/), [Node JS 18+](https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi), [Microsoft builders Tools 2019](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/) , CUDA 11.7 или CUDA 11.8
 1) Создаете бота в botFather
 2) клонируете этот репозиторий
 3) Запускаете `install.bat` в корневой папке
