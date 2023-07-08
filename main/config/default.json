@@ -1,5 +1,0 @@
-{
-    "TELEGRAM_TOKEN": "YOUR TG TOKEN",
-    "PYTHON_VENV_PATH" : "E:\\Dev\\transfer_rvc_voice\\rvc\\venv\\Scripts\\python",
-    "RVC_SCRIPT_PATH" : "E:\\Dev\\transfer_rvc_voice\\rvc"
-}
