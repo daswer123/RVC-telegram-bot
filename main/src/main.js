@@ -104,6 +104,7 @@ bot.on(message("text"), async (ctx) => {
     });
 
     bot.on("voice", async (ctx) => {
+      ctx.session ??= {...INITIAL_SESSION}
       if(ctx.session.testVoice){
         for (let i=0;i<12;i++){
           ctx.session.pith = i;

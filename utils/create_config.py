@@ -18,8 +18,8 @@ audio_sep_path = os.path.join(libs_dir , "audio_separator")
 main_path = os.path.join(base_dir , "main")
 
 # Формируем остальные пути  
-rvc_venv_path = os.path.join(rvc_path, "venv", "Scripts", "python")
-audio_sep_venv_path = os.path.join(audio_sep_path, "venv", "Scripts", "python")  
+rvc_venv_path = os.path.join(libs_dir, "venv", "Scripts", "python")
+audio_sep_venv_path = os.path.join(libs_dir, "venv", "Scripts", "python")  
 char_path = os.path.join(main_path,"config")
 
 data = {
