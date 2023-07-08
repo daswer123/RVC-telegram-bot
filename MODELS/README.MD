@@ -28,3 +28,5 @@ alica.txt:
 Alica
 Вредная лисичка
 female
+
+https://user-images.githubusercontent.com/22278673/252055549-713ed830-cf18-4e3f-a4bf-6812b7d3dcdd.png
