@@ -7,14 +7,18 @@
    -- *.index ( optional )
    -- *.jpg or *.png ( optional)
    -- *.txt ( name, description, ( male || female || child )
+   -- *.mp3 ( Audio sample ) ( Optional) 
  -- Char2
    -- *.pth
    -- *.index ( optional )
    -- *.jpg or *.png ( optional)
    -- *.txt ( name, description, ( male || female || child )
--Category 2
+   -- *.mp3 ( Audio sample ) ( Optional) 
+-- Category 2
+  -- Char1 
+   ***
+   
  -- default.jpg
- -- script.py
  ***
  
  
