@@ -27,7 +27,7 @@ def install_pytorch(cuda_version):
         command = "pip3 install torch torchvision torchaudio"
     else:
         print(f"У вас установлена версия CUDA {cuda_version}, которая не поддерживается данным скриптом. Устанавливаем CPU-версию PyTorch.")
-        command = "pip3 install torch torchvision torchaudio"
+        command = "pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118"
 
     result = os.system(command)
     if result != 0:
