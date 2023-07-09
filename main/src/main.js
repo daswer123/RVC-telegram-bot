@@ -228,7 +228,7 @@ bot.on(message("text"), async (ctx) => {
 bot.launch();
 
 // Restart msg
-// sendMessageToAllUsers("Бот был перезапущен, введите /start для начала работы",bot)
+sendMessageToAllUsers("Бот был перезапущен, введите /start для начала работы",bot)
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
