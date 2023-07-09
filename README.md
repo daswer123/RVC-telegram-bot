@@ -13,12 +13,12 @@ https://github.com/daswer123/tg_rvc_bot/assets/22278673/80639ac0-76b2-4942-a45a-
 3) Возможность тонко настроить преобразование голоса
 
 # Гайд по установке:
-0) Убедитесь что у вас установленны: [Python 3.10.x](https://www.python.org/downloads/release/python-3109/), [Node JS 18+](https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi), [Microsoft builders Tools 2019](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/) , CUDA 11.7 или CUDA 11.8
-1) Создаете бота в botFather
-2) клонируете этот репозиторий
-3) Запускаете `install.bat` в корневой папке
-4) Как только загрузка закончилась заходите в папку utils и запускаете `create main config.bat`, вам нужно будет указать ваш ключ к боту
-5) Далее вы должны сформировать структуру ваших голосовых моделей, зайдите в папку MODELS и прочитайте [Readme](https://github.com/daswer123/tg_rvc_bot/tree/main/MODELS#readme), там указана примерная структура папок которая должна быть
+1) Убедитесь что у вас установленны: [Python 3.10.x](https://www.python.org/downloads/release/python-3109/), [Node JS 18+](https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi), [Microsoft builders Tools 2019](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/) , [CUDA 11.7](https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_516.01_windows.exe) или [CUDA 11.8](https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_522.06_windows.exe)
+2) Создаете бота в botFather
+3) клонируете этот репозиторий
+4) Запускаете `install.bat` в корневой папке
+5) Как только загрузка закончилась заходите в папку utils и запускаете `create main config.bat`, вам нужно будет указать ваш ключ к боту
+6) Далее вы должны сформировать структуру ваших голосовых моделей, зайдите в папку MODELS и прочитайте [Readme](https://github.com/daswer123/tg_rvc_bot/tree/main/MODELS#readme), там указана примерная структура папок которая должна быть
    
 ![image](https://github.com/daswer123/tg_rvc_bot/assets/22278673/713ed830-cf18-4e3f-a4bf-6812b7d3dcdd)
 
