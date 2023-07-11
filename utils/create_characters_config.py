@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import glob
 
 def get_character_info(character_dir, category):
     character_info = {}
@@ -22,8 +23,16 @@ def get_character_info(character_dir, category):
         return None
 
     if not image_file:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        image_file = os.path.join(script_dir, "default.jpg")
+        models_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'MODELS'))
+
+        # Ищем изображения с нужными расширениями
+        image_candidates = []
+        for ext in ('*.png', '*.jpg', '*.jpeg'):
+            image_candidates.extend(glob.glob(os.path.join(models_dir, ext)))
+
+        # Если найдено хотя бы одно изображение, используем его
+        if image_candidates:
+            image_file = image_candidates[0]
 
     if not audio_file:
         audio_file = ""

@@ -228,6 +228,13 @@ bot.on(message("text"), async (ctx) => {
 bot.launch();
 
 // Restart msg
+
+
+const sessionPath = `sessions`;
+ // создаем папку сессии, если она еще не существует
+ if (!fs.existsSync(sessionPath)) {
+  fs.mkdirSync(sessionPath, { recursive: true });
+}
 sendMessageToAllUsers("Бот был перезапущен, введите /start для начала работы",bot)
 
 process.once("SIGINT", () => bot.stop("SIGINT"));

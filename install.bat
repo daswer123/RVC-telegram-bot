@@ -1,6 +1,8 @@
 @echo off
 @chcp 65001
 
+::call local_path.bat
+
 cd libs
 
 python -m venv venv

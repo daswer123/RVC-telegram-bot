@@ -1,6 +1,8 @@
 @echo off
 @chcp 65001
 
+call ../local_path.bat
+
 python create_characters_config.py "../MODELS"
 echo Файл с персонажами создан
 
