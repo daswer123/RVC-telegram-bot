@@ -1,15 +1,14 @@
 @echo off
 @chcp 65001
 
-set local_path_bat= local_path.bat
+set local_path_bat=local_path.bat
 
 if exist "%local_path_bat%" (
-    echo local_path.bat найден. Использование локальной среды.
+    echo %local_path_bat% найден. Использование локальной среды.
     call %local_path_bat%
 ) else (
-    echo local_path.bat не найден. Использование глобальной среды.
+    echo %local_path_bat% не найден. Использование глобальной среды.
 )
-
 
 cd main
 call npm run dev
