@@ -11,7 +11,5 @@ if exist "%local_path_bat%" (
 )
 
 
-call local_path.bat
-
 cd main
 call npm run dev
