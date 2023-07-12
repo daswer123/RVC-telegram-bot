@@ -19,7 +19,7 @@ https://github.com/daswer123/tg_rvc_bot/assets/22278673/80639ac0-76b2-4942-a45a-
 3) Возможность тонко настроить преобразование голоса
 
 # Гайд по установке:
-1) Убедитесь что у вас установленны: [Python 3.10.x](https://www.python.org/downloads/release/python-3109/), [Node JS 18+](https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi), [Microsoft builders Tools 2019](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/) , [CUDA 11.7](https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_516.01_windows.exe) или [CUDA 11.8](https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_522.06_windows.exe)
+1) Убедитесь что у вас установленны: [Python 3.10.x](https://www.python.org/downloads/release/python-3109/), [Node JS 18+](https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi), [Microsoft builders Tools 2019](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/) , [ffmpeg](https://ffmpeg.org/), [CUDA 11.7](https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_516.01_windows.exe) или [CUDA 11.8](https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_522.06_windows.exe)
 2) Создаете бота в botFather
 3) клонируете этот репозиторий
 4) Запускаете `install.bat` в корневой папке
