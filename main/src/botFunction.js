@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3 } from "./functions.js";
+import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo } from "./functions.js";
 import { INITIAL_SESSION } from "./variables.js";
 import config from "config";
 import fs from "fs";
@@ -29,6 +29,69 @@ export function printCurrentTime() {
   const timeString = `${hours}:${minutes}:${seconds}`;
 
   console.log(timeString);
+}
+
+export async function processVideo(ctx, sessionPath) {
+  try {
+    const filePath = `${sessionPath}/video.mp4`;
+    const audioPath = `${sessionPath}/audio.mp3`;
+    const vocalPath = `${sessionPath}/vocal.mp3`;
+    const audioOutPath = `${sessionPath}/audio_out_cut.mp3`;
+    const instrumentalPath = `${sessionPath}/instrumental.mp3`;
+    const audioFullPath = `${sessionPath}/audio_full.mp3`;
+    const videoOutPath = `${sessionPath}/video_out.mp4`;
+
+    // Загрузка видео
+    const link = await ctx.telegram.getFileLink(ctx.message.video.file_id);
+    await downloadFile(link, filePath);
+    const message = await ctx.reply("[1/6] Скачивание видео...");
+    const messageId = message.message_id;
+
+    // Разделение звука и видео
+    const [videoOutput, audioOutput] = await splitVideoAndAudio(filePath, sessionPath);
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "[2/6]  Видео и аудио разделены. Разделение иструментала и Вокала...");
+
+    // Разделение музыки и аудио
+    await separateAudio(sessionPath, "audio.mp3");
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "[3/6] Инструментал и вокал разделены. Преобразование голоса...");
+
+    // Преобразование аудио
+    await transformAudio(ctx.session, sessionPath, vocalPath, true);
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "[4/6] Голос преобразован. Склеивание Инструментала и вокала...");
+
+    // Склеивание вокала и инструментала
+    await mergeAudioFilesToMp3(audioOutPath, instrumentalPath, audioFullPath, ctx);
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "[5/6]  Вокал и инструментал склеены. Сборка видео...");
+
+    // Склеивание аудио и видео
+    await mergeAudioAndVideo(videoOutput, audioFullPath, videoOutPath);
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "[6/6]  Видео собрано, отправка...");
+
+    await ctx.sendVideo({
+      source: videoOutPath,
+    });
+
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "Готово");
+
+    // Удаление временных файлов
+    fs.readdir(sessionPath, (err, files) => {
+      if (err) {
+        console.error(`Error reading directory: ${err}`);
+      } else {
+        files.forEach(file => {
+          if (file !== path.basename(videoOutPath) && file !== path.basename(filePath)) {
+            fs.unlink(path.join(sessionPath, file), err => {
+              if (err) console.error(`Error deleting file: ${err}`);
+            });
+          }
+        });
+      }
+    });
+
+  } catch (err) {
+    console.error(`Error during video processing: ${err}`);
+    ctx.reply('Извините, произошла ошибка при обработке видео.');
+  }
 }
 
 
@@ -201,10 +264,10 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
       reply_to_message_id: messageId // отвечаем на исходное сообщение
     });
   } else {
-    const filePath = await transformAudio(ctx.session, sessionPath);
-    await ctx.sendChatAction("upload_voice");
-    await ctx.sendVoice({
-      source: `${sessionPath}/audio_out.ogg`,
+    const filePath = await transformAudio(ctx.session, sessionPath, "", true);
+    await ctx.sendChatAction("upload_audio");
+    await ctx.sendAudio({
+      source: `${sessionPath}/audio_out_cut.mp3`,
       reply_to_message_id: messageId // отвечаем на исходное сообщение
     });
 

@@ -52,6 +52,58 @@ function processText(text) {
   return text;
 }
 
+const extractAudio = (filePath, output) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(filePath)
+      .output(output)
+      .noVideo()
+      .on('end', resolve)
+      .on('error', reject)
+      .run();
+  });
+};
+
+const extractVideo = (filePath, output) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(filePath)
+      .output(output)
+      .noAudio()
+      .on('end', resolve)
+      .on('error', reject)
+      .run();
+  });
+};
+
+export const splitVideoAndAudio = async (filePath, sessionPath) => {
+  const audioOutput = `${sessionPath}/audio.mp3`;
+  const videoOutput = `${sessionPath}/video_empty.mp4`;
+
+  await Promise.all([
+    extractAudio(filePath, audioOutput),
+    extractVideo(filePath, videoOutput),
+  ]);
+
+  // fs.unlink(filePath, (err) => {
+  //   if (err) console.error(`Error deleting file: ${err}`);
+  // });
+
+  return [videoOutput, audioOutput];
+};
+
+export const mergeAudioAndVideo = (videoPath, audioPath, outputPath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(videoPath)
+      .videoCodec('copy')
+      .input(audioPath)
+      .audioCodec('copy')
+      .output(outputPath)
+      .on('end', resolve)
+      .on('error', reject)
+      .run();
+  });
+};
+
 
 export const mergeAudioFilesToMp3 = (vocalFile, instrumentalFile, outputFile, ctx) => {
 
@@ -269,7 +321,7 @@ export async function downloadFromYoutube(url, sessionPath) {
 
 }
 
-export async function separateAudio(sessionPath, filename) {
+export async function separateAudio(sessionPath, filename = "audio.wav") {
 
 
   let optionss = {
@@ -278,7 +330,7 @@ export async function separateAudio(sessionPath, filename) {
     pythonOptions: ['-u'], // get print results in real-time
     scriptPath: config.get("AUDIO_SEP_PATH"),
     args: [
-      `${sessionPath}/audio.wav`,
+      `${sessionPath}/${filename}`,
       `${sessionPath}`,
     ]
   };

@@ -9,7 +9,7 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
 import { INITIAL_SESSION } from "./variables.js"
 import { setBotCommands, registerBotCommands } from "./botCommands.js";
-import { showMenu, processAudioMessage, is_youtube_url, process_youtube_audio, process_audio_file, sendMessageToAllUsers, printCurrentTime } from "./botFunction.js";
+import { showMenu, processAudioMessage, is_youtube_url, process_youtube_audio, sendMessageToAllUsers, printCurrentTime, processVideo } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
 
 // Указываем путь к ffmpeg
@@ -24,6 +24,20 @@ process.setMaxListeners(0);
 
 registerBotCommands(bot)
 registerBotActions(bot)
+
+bot.on("video", async (ctx) => {
+  ctx.session ??= { ...INITIAL_SESSION }
+
+  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+  const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+  const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+  // Создаем папку для пользователя, если она еще не существует
+  if (!fs.existsSync(sessionPath)) {
+    fs.mkdirSync(sessionPath, { recursive: true });
+  }
+  await processVideo(ctx, sessionPath)
+})
 
 
 bot.on(message("text"), async (ctx) => {
