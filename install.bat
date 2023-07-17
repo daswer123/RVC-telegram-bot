@@ -23,5 +23,11 @@ cd ../../
 echo Скачивание hubert_base для RVC
 python utils\dowload_hubert.py .\main\hubert_base.pt
 
+echo Установка зависимостей для Silero-TTS
+cd libs\siero-tts-server
+start start.bat
+
+cd ../../
+
 cd main
 npm install

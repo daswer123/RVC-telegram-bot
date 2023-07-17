@@ -1,7 +1,7 @@
 @echo off
 @chcp 65001
 
-set local_path_bat=local_path.bat
+set local_path_bat="../../local_path.bat"
 
 if exist "%local_path_bat%" (
     echo %local_path_bat% найден. Использование локальной среды.
@@ -10,10 +10,7 @@ if exist "%local_path_bat%" (
     echo %local_path_bat% не найден. Использование глобальной среды.
 )
 
-cd libs/siero-tts-server
-start start.bat
+call venv\Scripts\activate
 
-cd ../../
-
-cd main
-call node src/main.js
+python -m silero_api_server -p 8010
+pause

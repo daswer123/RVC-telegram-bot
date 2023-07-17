@@ -1,0 +1,1 @@
+silero-api-server==0.2.3

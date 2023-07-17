@@ -20,6 +20,7 @@ main_path = os.path.join(base_dir , "main")
 # Формируем остальные пути  
 rvc_venv_path = os.path.join(libs_dir, "venv", "Scripts", "python")
 audio_sep_venv_path = os.path.join(libs_dir, "venv", "Scripts", "python")  
+siero_path = os.path.join(libs_dir, "siero-tts-server", "venv", "Lib", "site-packages", "silero_api_server", "sessions")
 char_path = os.path.join(main_path,"config")
 
 data = {
@@ -29,8 +30,10 @@ data = {
     "PYTHON_VENV_SEP_PATH": audio_sep_venv_path,
     "AUDIO_SEP_PATH": audio_sep_path, 
     "MAIN_PATH": main_path,
-    "CHARACTER_PATH": char_path
+    "CHARACTER_PATH": char_path,
+    "SIERO_AUDIO_PATH": siero_path
 }
 
+# "SIERO_AUDIO_PATH": "D:\\Dev\\RVC_BOT\\libs\\siero-tts-server\\venv\\Lib\\site-packages\\silero_api_server\\sessions"
 with open("default.json", "w") as f: 
     json.dump(data, f, indent=4)
