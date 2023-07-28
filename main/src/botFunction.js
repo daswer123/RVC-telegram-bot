@@ -6,6 +6,8 @@ import fs from "fs";
 import path from "path";
 
 
+
+
 // Функция для информировании о времени
 export function printCurrentTime() {
 
@@ -36,10 +38,12 @@ export async function processVideo(ctx, sessionPath) {
     const filePath = `${sessionPath}/video.mp4`;
     const audioPath = `${sessionPath}/audio.mp3`;
     const vocalPath = `${sessionPath}/vocal.mp3`;
+    const vocalPathDeEcho = `${sessionPath}/vocal_de_echo.mp3`;
     const audioOutPath = `${sessionPath}/audio_out_cut.mp3`;
     const instrumentalPath = `${sessionPath}/instrumental.mp3`;
     const audioFullPath = `${sessionPath}/audio_full.mp3`;
     const videoOutPath = `${sessionPath}/video_out.mp4`;
+
 
     // Загрузка видео
     const link = await ctx.telegram.getFileLink(ctx.message.video.file_id);
@@ -54,6 +58,10 @@ export async function processVideo(ctx, sessionPath) {
     // Разделение музыки и аудио
     await separateAudio(sessionPath, "audio.mp3");
     await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "[3/6] Инструментал и вокал разделены. Преобразование голоса...");
+
+    // Убираем эхо
+    // await separateAudio(sessionPath, "vocal.mp3", "DeReverb");
+    // await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "Убираем Эхо");
 
     // Преобразование аудио
     await transformAudio(ctx.session, sessionPath, vocalPath, true);
@@ -72,6 +80,19 @@ export async function processVideo(ctx, sessionPath) {
     });
 
     await ctx.telegram.editMessageText(ctx.chat.id, messageId, null, "Готово");
+
+    try {
+      const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+      const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+      const username = ctx.from.username; // получаем ник пользователя
+      const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+      const filename = `${username}.txt`;
+      const filepath = path.join(sessionPath, filename);
+      fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
+    } catch (err) {
+      console.log(err)
+    }
 
     // Удаление временных файлов
     fs.readdir(sessionPath, (err, files) => {
@@ -116,49 +137,75 @@ export async function sendMessageToAllUsers(message, bot) {
 }
 
 
-export async function process_audio_file(ctx, sessionPath, filename = "") {
-  // Создаем папку сессии, если она еще не существует
-  if (!fs.existsSync(sessionPath)) {
-    fs.mkdirSync(sessionPath, { recursive: true });
+export async function process_audio_file(ctx, sessionPath, filename = "audio.wav") {
+  try {
+    // Создаем папку сессии, если она еще не существует
+    if (!fs.existsSync(sessionPath)) {
+      fs.mkdirSync(sessionPath, { recursive: true });
+    }
+
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    const vocalPath = path.join(fullSessionPath, "vocal.mp3");
+
+    const instrumentalPath = path.join(fullSessionPath, "instrumental.mp3");
+    const sessionOutputPath = path.join(fullSessionPath, "audio_out.mp3");
+    const resultPath = path.join(fullSessionPath, "result.mp3");
+
+    await ctx.reply("[1/4] Разделение вокала и фоновой музыки");
+    await separateAudio(sessionPath, "audio.wav");
+
+    // Убираем эхо
+    // await ctx.reply("Убираем Эхо");
+    // await separateAudio(sessionPath, "vocal.mp3", "DeReverb");
+
+    // const vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_echo.mp3");
+
+    await ctx.reply("[2/4] Подготовка инструментала и вокала к работе");
+    await ctx.sendAudio({ source: vocalPath });
+    await ctx.sendAudio({ source: instrumentalPath });
+
+    await ctx.reply("[3/4] Преобразование извлеченного вокала");
+    await transformAudio(ctx.session, sessionPath, vocalPath, true);
+
+    await ctx.reply("[4/4] Склеивание вокала и фоновой музыки");
+    await mergeAudioFilesToMp3(sessionOutputPath, instrumentalPath, resultPath, ctx);
+
+    await ctx.reply("Кавер готов, если тебя не устроил голос, то просто кидай боту это вырезанный вокал и меняй настройки. Когда тебя все устроит используй команду /merge что бы совместить вокал и инструментал");
+    await ctx.sendAudio({ source: resultPath });
+
+    try {
+      const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+      const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+      const username = ctx.from.username; // получаем ник пользователя
+      const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+      const filename = `${username}.txt`;
+      const filepath = path.join(sessionPath, filename);
+      fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
+    } catch (err) {
+      console.log(err)
+    }
+
+    // Удаление всех файлов в директории, кроме audio.wav, vocalPath, instrumentalPath и resultPath
+    fs.readdir(sessionPath, (err, files) => {
+      if (err) {
+        console.error(`Error reading directory: ${err}`);
+      } else {
+        files.forEach(file => {
+          if (![path.basename(`${sessionPath}/audio.wav`), path.basename(vocalPath), path.basename(instrumentalPath), path.basename(resultPath)].includes(file)) {
+            fs.unlink(path.join(sessionPath, file), err => {
+              if (err) console.error(`Error deleting file: ${err}`);
+            });
+          }
+        });
+      }
+    });
+  } catch (err) {
+    console.error(`Error during audio processing: ${err}`);
+    ctx.reply('Извините, произошла ошибка при обработке аудио.');
   }
-
-  await ctx.reply("[1/4] Разделение вокала и фоновой музыки");
-  await separateAudio(sessionPath, filename);
-
-  await ctx.reply("[2/4] Подготовка инструментала и вокала к работе");
-
-  const vocalPath = config.get("MAIN_PATH") + "\\" + sessionPath + "\\" + "vocal.mp3"
-  const InstrumentalPath = config.get("MAIN_PATH") + "\\" + sessionPath + "\\" + "instrumental.mp3"
-
-
-  await ctx.reply("Используй этот вокал для тестирования различных настроек");
-  await ctx.sendAudio({
-    source: vocalPath,
-  });
-
-  await ctx.reply("Используй этот фон, когда найдешь идеальный настройки для вокала. Используй его с помощью другой комманды которая обьеденит вокал и инструментал");
-  await ctx.sendAudio({
-    source: InstrumentalPath,
-  });
-
-  await ctx.reply("[3/4] Преобразование извлеченного вокала");
-  await transformAudio(ctx.session, sessionPath, vocalPath, true);
-
-  await ctx.reply("[4/4] Склеивание вокала и фоновой музыки");
-
-  const fullSessonPath = config.get("MAIN_PATH") + "\\" + sessionPath
-
-  const sessionOutputPath = fullSessonPath + "\\" + "audio_out.mp3";
-
-  console.log(`sessionOutputPath: ${sessionOutputPath}`, `InstrumentalPath: ${InstrumentalPath}`, `fullSessonPath: ${fullSessonPath}\\result.mp3`)
-
-  await mergeAudioFilesToMp3(sessionOutputPath, InstrumentalPath, fullSessonPath + "\\result.mp3", ctx)
-
-  await ctx.reply("Кавер готов, если тебя не устроил голос, то просто кидай боту это вырезанный вокал и меняй настройки. Когда тебя все устроит используй команду /merge что бы совместить вокал и инструментал");
-  await ctx.sendAudio({
-    source: `${sessionPath}/result.mp3`,
-  });
 }
+
 
 export function is_youtube_url(url) {
   // Регулярное выражение для проверки, является ли текст URL-адресом YouTube
@@ -187,8 +234,8 @@ export const processAiCover = async (ctx) => {
 
   try {
     // создаем текстовый файл с именем пользователя
-    const filename = `${username}.txt`;
-    const filepath = path.join(sessionPath, filename);
+    let filenamee = `${username}.txt`;
+    let filepath = path.join(sessionPath, filenamee = "audio.wav");
     fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
   } catch (err) {
     console.log(err)
@@ -204,6 +251,7 @@ export const processAiCover = async (ctx) => {
 };
 
 export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", sessionPathIn = "") => {
+  try{
   ctx.session ??= { ...INITIAL_SESSION };
   const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
   const username = ctx.from.username; // получаем ник пользователя
@@ -266,13 +314,19 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
   } else {
     const filePath = await transformAudio(ctx.session, sessionPath, "", true);
     await ctx.sendChatAction("upload_audio");
-    await ctx.sendAudio({
-      source: `${sessionPath}/audio_out_cut.mp3`,
-      reply_to_message_id: messageId // отвечаем на исходное сообщение
-    });
+
+    if(ctx.session.voiceOrAudioOut === "audio"){
+      await ctx.sendAudio({
+        source: `${sessionPath}/audio_out_cut.mp3`,
+      });
+    } else {
+      await ctx.sendVoice({
+        source: `${sessionPath}/audio_out_cut.mp3`,
+      });
+    }    
 
   }
-};
+}catch(err){ctx.reply("Не удалось обработать файл, возможно он слишком большой.");}};
 
 export async function deletePreviousMessage(ctx) {
   if (ctx.session.previousMessageId) {
@@ -319,6 +373,29 @@ export const loadSettings = async (ctx) => {
   }
 }
 
+export function saveSuggestion(username, suggestion) {
+  const filename = 'suggestions.json';
+  let data = [];
+
+  // Если файл уже существует, читаем его содержимое
+  if (fs.existsSync(filename)) {
+    data = JSON.parse(fs.readFileSync(filename));
+  }
+
+  // Добавляем новое предложение
+  data.push({
+    username,
+    date: new Date().toISOString(),
+    suggestion,
+  });
+
+  // Записываем обновленные данные обратно в файл
+  fs.writeFile(filename, JSON.stringify(data, null, 2), (err) => {
+    if (err) throw err;
+    console.log(`Suggestion from ${username} has been saved.`);
+  });
+}
+
 export const showMenuBtn = async (ctx) => {
   const keyboard = Markup.inlineKeyboard([
     Markup.button.callback("Меню", "menu"),
@@ -329,13 +406,14 @@ export const showMenuBtn = async (ctx) => {
 };
 
 export const showMenu = async (ctx) => {
-  const message = `*Меню*\n\n\Ваш текущий персонаж: *${ctx.session.name}*\n\Пресет голоса: *${ctx.session.voice_preset}*\nPich: ${ctx.session.pith}\n\nВы можете прислать текст и он будет озвучен голосом персонажа ( голос будет роботизированным )\n\nОтправьте голосовое или перешлите уже сделанное, так же вы можете кинуть аудиофайл`;
+  const message = `*Меню*\n\n\Ваш текущий персонаж: *${ctx.session.name}*\n\Пресет голоса: *${ctx.session.voice_preset}*\nPich: ${ctx.session.pith}\nВы можете сделать предложение по улучшению функционала бота, для этого выберите специальный пункт в меню\n\nВы можете прислать текст и он будет озвучен голосом персонажа ( голос будет роботизированным )\n\nОтправьте голосовое или перешлите уже сделанное, так же вы можете кинуть аудиофайл`;
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback("Настройки", "settings"), Markup.button.callback(`Выбрать персонажа`, "characters")],
     [Markup.button.callback(`Показать текущие настройки`, "current_settings")],
     [Markup.button.callback(`Сделать ИИ кавер`, "cover")],
     [Markup.button.callback(`Сохранить текущие настройки`, "save_preset"), Markup.button.callback(`Загрузить настройки`, "load_preset")],
+    [Markup.button.callback(`Предложения по улучшению бота`, "make_predlog")],
   ]).resize();
 
   await ctx.replyWithMarkdown(message, keyboard);
@@ -377,9 +455,10 @@ export async function showSettings(ctx) {
   const protectVoicelessDescription = "Protect voiceless - Защита безголосых согласных и звуков дыхания для предотвращения артефактов музыки. Установите значение0,5 для отключения. Уменьшите значение для усиления защиты, но это может снизить точность индексирования";
   const vocalVolumeDescription = "Громкость вокала - Уровень громкости вокала может быть от 0 до 3";
   const instrumentalVolumeDescription = "Громкость инструментала - Уровень громкости инструментала может быть от 0 до 3";
-  const voiceActorDescription = "Изначальный голос для преобразования модели из текста в речь"
+  const voiceActorDescription = "Модель для голоса - Изначальный голос для преобразования модели из текста в речь"
+  const outputType = "Тип ответа - Тип присылаемого аудио в ответ на голосовое, 2 режима - audio и voice"
 
-  const settingsMessage = [pithDescription, methodDescription, mangioCrepeHopDescription, featureRatioDescription, protectVoicelessDescription, vocalVolumeDescription, instrumentalVolumeDescription, voiceActorDescription].join("\n\n");
+  const settingsMessage = [pithDescription, methodDescription, mangioCrepeHopDescription, featureRatioDescription, protectVoicelessDescription, vocalVolumeDescription, instrumentalVolumeDescription, voiceActorDescription,outputType].join("\n\n");
 
   const settingsKeyboard = Markup.inlineKeyboard([
     [Markup.button.callback(`Pith: ${session.pith}`, "set_pith"), Markup.button.callback(`Method: ${session.method}`, "set_method")],
@@ -388,6 +467,7 @@ export async function showSettings(ctx) {
     [Markup.button.callback(`Гр. вокала: ${session.voice_volume}`, "set_vocal_volume"), Markup.button.callback(`Гр. инструментала: ${session.instrumnet_volume}`, "set_instrumental_volume")],
     [Markup.button.callback(`Изменить текстовую голосовую модель ${session.voiceActor}`, "set_voice")],
     [Markup.button.callback(`Изменить скорость речи ${session.voice_speed}`, "set_voice_speed")],
+    [Markup.button.callback(`Тип ответа на голосовое: ${session.voiceOrAudioOut}`, "set_out_voice")],
     [Markup.button.callback("Меню", "menu")],
   ]).resize();
 

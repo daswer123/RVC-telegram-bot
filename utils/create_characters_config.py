@@ -42,7 +42,16 @@ def get_character_info(character_dir, category):
 
     try:
         with open(name_file, "r", encoding="utf-8") as f:
-            name, description, gender = f.read().split("\n")
+            lines = f.readlines()[:3]
+            while len(lines) < 3:
+                lines.append('')
+            name, description, gender = lines
+            if description == '':
+                description = 'some desk'
+                print(f"Warning: No description found for {character_dir}. Using default.")
+            if gender == '':
+                gender = 'male'
+                print(f"Warning: No gender found for {character_dir}. Using default.")
 
         character_info["name"] = name
         character_info["gender"] = gender

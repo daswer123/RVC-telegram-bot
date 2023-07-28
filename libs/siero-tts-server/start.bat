@@ -10,7 +10,8 @@ if exist "%local_path_bat%" (
     echo %local_path_bat% не найден. Использование глобальной среды.
 )
 
-call venv\Scripts\activate
+call ../venv/scripts/activate
+pip install loguru==0.7.0
 
-python -m silero_api_server -p 8010
+python -m server.py-p 8010
 pause

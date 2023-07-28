@@ -9,13 +9,44 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
 import { INITIAL_SESSION } from "./variables.js"
 import { setBotCommands, registerBotCommands } from "./botCommands.js";
-import { showMenu, processAudioMessage, is_youtube_url, process_youtube_audio, sendMessageToAllUsers, printCurrentTime, processVideo } from "./botFunction.js";
+import { showMenu, processAudioMessage, is_youtube_url, process_youtube_audio, sendMessageToAllUsers, printCurrentTime, processVideo, saveSuggestion,processAiCover } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 export const bot = new Telegraf(config.get("TELEGRAM_TOKEN"), { handlerTimeout: 600_000 });
+
+class Semaphore {
+  constructor(count) {
+    this.count = count;
+    this.waiting = [];
+  }
+
+  acquire() {
+    return new Promise((resolve) => {
+      if (this.count > 0) {
+        this.count--;
+        resolve();
+      } else {
+        this.waiting.push(resolve);
+      }
+    });
+  }
+
+  release() {
+    if (this.waiting.length > 0) {
+      const nextInLine = this.waiting.shift();
+      nextInLine();
+    } else {
+      this.count++;
+    }
+  }
+}
+
+// создаем семафор, который разрешает 2 одновременных запросов
+const semaphore = new Semaphore(2);
+
 
 bot.use(session());
 setBotCommands(bot);
@@ -26,6 +57,7 @@ registerBotCommands(bot)
 registerBotActions(bot)
 
 bot.on("video", async (ctx) => {
+  try{
   ctx.session ??= { ...INITIAL_SESSION }
 
   const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
@@ -37,11 +69,26 @@ bot.on("video", async (ctx) => {
     fs.mkdirSync(sessionPath, { recursive: true });
   }
   await processVideo(ctx, sessionPath)
+}catch(err){
+  ctx.reply("Произошла ошибка при обработке видео, повторите снова")
+}
 })
 
 
 bot.on(message("text"), async (ctx) => {
+  try{
   ctx.session ??= { ...INITIAL_SESSION }
+
+  if (ctx.session.waitForPredlog){
+    saveSuggestion(ctx.from.username, ctx.message.text);
+
+    ctx.reply(`Предложение по улучшению было успешно записанно`, Markup.inlineKeyboard([
+      Markup.button.callback('Меню', 'menu')
+    ]));
+    ctx.session.waitForPredlog = false;
+    return
+  }
+
 
   if (ctx.session.waitForPresetSave) {
     ctx.session.waitForPresetSave = false;
@@ -88,7 +135,7 @@ bot.on(message("text"), async (ctx) => {
     const youtube_url = ctx.message.text;
 
     ctx.reply("Скачивание аудио с YouTube...");
-    await process_youtube_audio(ctx, sessionPath, youtube_url);
+      process_youtube_audio(ctx, sessionPath, youtube_url);
 
     ctx.session.waitingForCover = false;
     return
@@ -266,9 +313,13 @@ bot.on(message("text"), async (ctx) => {
     }
 
   }
+}catch(err){
+  ctx.reply("Произошла ошибка при обработке сообщения, повторите снова")
+}
 });
 
 bot.on("voice", async (ctx) => {
+  try{
   ctx.session ??= { ...INITIAL_SESSION }
   if (ctx.session.testVoice) {
     for (let i = 0; i < 12; i++) {
@@ -301,9 +352,13 @@ bot.on("voice", async (ctx) => {
 
     ctx.state.processingVoiceMessages = false;
   })();
+}catch(err){
+  ctx.reply("Произошла ошибка при обработки сообщения, попробуйте снова")
+}
 });
 
 bot.on("audio", async (ctx) => {
+  try{
   ctx.session ??= { ...INITIAL_SESSION }
   if (ctx.session.waitingForCover) {
 
@@ -330,7 +385,7 @@ bot.on("audio", async (ctx) => {
       ctx.state.processingVoiceMessages = false;
     })();
 
-
+    return
   }
   else if (ctx.session.mergeAudio) {
     ctx.session ??= { ...INITIAL_SESSION };
@@ -401,21 +456,24 @@ bot.on("audio", async (ctx) => {
       ctx.state.processingVoiceMessages = false;
     })();
   }
-
+  }catch(err){
+    ctx.reply("Произошла ошибка при обработкой аудио")
+  }
 });
 
 
 bot.launch();
 
 // Restart msg
-// sendMessageToAllUsers("Бот был перезапущен, введите /start для начала работы", bot)
+sendMessageToAllUsers("Бот был перезапущен, все настройки сброшенны\nВведите /start для начала работы", bot)
+// sendMessageToAllUsers("Бот временно не работает, тех.работы", bot)
 
 const sessionPath = `sessions`;
 // создаем папку сессии, если она еще не существует
 if (!fs.existsSync(sessionPath)) {
   fs.mkdirSync(sessionPath, { recursive: true });
 }
-// sendMessageToAllUsers("Бот был перезапущен, введите /start для начала работы", bot)
+
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

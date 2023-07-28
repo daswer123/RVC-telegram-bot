@@ -121,11 +121,12 @@ from infer_pack.models import (
 from my_utils import load_audio
 from fairseq import checkpoint_utils
 from scipy.io import wavfile
+import rmvpe
 
 hubert_model=None
 def load_hubert():
     global hubert_model
-    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(["hubert_base.pt"],suffix="",)
+    models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(["rvc_models/hubert_base.pt"],suffix="",)
     hubert_model = models[0]
     hubert_model = hubert_model.to(device)
     if(is_half):hubert_model = hubert_model.half()

@@ -66,8 +66,17 @@ export function registerBotActions(bot) {
 
   // Обработчик для кнопки "load_preset"
   bot.action('load_preset', (ctx) => {
+    ctx.session ??= { ...INITIAL_SESSION }
     loadSettings(ctx)
   });
+
+  // Обработчик для кнопки "load_preset"
+  bot.action('make_predlog', (ctx) => {
+    ctx.session ??= { ...INITIAL_SESSION }
+    ctx.reply("Напишите какой функционал вы бы хотели видеть в боте, какую голосовую модель стоит добавить.")
+    ctx.session.waitForPredlog = true;
+  });
+  
 
   // Обработчик для кнопок пресетов
   bot.action(/select_preset:(.+)/, (ctx) => {
@@ -196,6 +205,8 @@ export function registerBotActions(bot) {
   })
 
   bot.action("characters", async (ctx) => {
+    ctx.session ??= { ...INITIAL_SESSION }
+    try{
     ctx.session ??= { ...INITIAL_SESSION };
     const categoryButtons = Object.keys(groupedCharacters).map((category, index) => {
       return Markup.button.callback(category, `category-${index}`);
@@ -207,10 +218,12 @@ export function registerBotActions(bot) {
         columns: 3,
       }).resize()
     );
-  });
-
+}catch(e){ctx.reply("Произшла ошибка, введите /start что бы начать сначала")}});
+try{
   Object.entries(groupedCharacters).forEach(([category, charactersInCategory], categoryIndex) => {
+    
     bot.action(`category-${categoryIndex}`, async (ctx) => {
+      ctx.session ??= { ...INITIAL_SESSION }
       ctx.session.currentCategoryIndex = categoryIndex
       const characterButtons = charactersInCategory.map((character, index) => {
         return Markup.button.callback(character.name, `character-${categoryIndex}-${index}`);
@@ -226,6 +239,7 @@ export function registerBotActions(bot) {
 
     charactersInCategory.forEach((character, characterIndex) => {
       bot.action(`character-${categoryIndex}-${characterIndex}`, async (ctx) => {
+        ctx.session ??= { ...INITIAL_SESSION }
 
         ctx.session.model_path = character.model_path;
         ctx.session.index_path = character.index_path;
@@ -282,13 +296,14 @@ export function registerBotActions(bot) {
         ctx.session.prevMessageId = newMessage.message_id;
       });
     });
-  });
+
+})}catch(e){console.log(e)};
 
 
 
   bot.action("select_male", async (ctx) => {
     ctx.session ??= { ...INITIAL_SESSION }
-    ctx.session.pith = ctx.session.gender === "male" ? 0 : ctx.session.gender === "female" ? 12 : 6;
+    ctx.session.pith = ctx.session.gender.trim() === "male" ? 0 : ctx.session.gender.trim() === "female" ? 12 : 6;
 
     if (ctx.session.gender === "male") {
       ctx.session.voiceActor = getRandomMaleVoice();
@@ -307,10 +322,10 @@ export function registerBotActions(bot) {
 
   bot.action("select_female", async (ctx) => {
     ctx.session ??= { ...INITIAL_SESSION }
-    ctx.session.pith = ctx.session.gender === "female" ? 0 : ctx.session.gender === "male" ? -12 : -6;
+    ctx.session.pith = ctx.session.gender.trim() === "female" ? 0 : ctx.session.gender.trim() === "male" ? -12 : -6;
 
 
-    if (ctx.session.gender === "male") {
+    if (ctx.session.gender.trim() === "male") {
       ctx.session.voiceActor = getRandomMaleVoice();
     } else {
       ctx.session.voiceActor = getRandomFemaleVoice();
@@ -396,13 +411,36 @@ export function registerBotActions(bot) {
       Markup.button.callback("Harvest", "method_harvest"),
       Markup.button.callback("Crepe", "method_crepe"),
       Markup.button.callback("Mango-Crepe", "method_mangio-crepe"),
+      Markup.button.callback("Rmvpe", "method_rmvpe"),
     ]).resize();
     await ctx.reply("Выберите метод:", methodKeyboard);
   });
 
+  bot.action("set_out_voice", async (ctx) => {
+    ctx.session ??= { ...INITIAL_SESSION }
+    const outputKey = Markup.inlineKeyboard([
+      Markup.button.callback("voice", "output_voice"),
+      Markup.button.callback("audio", "output_audio"),
+    ]).resize();
+    await ctx.reply("Выберите тип аудио в ответ на ваше сообещние:", outputKey);
+  });
+
+  bot.action(/output_(voice|audio)/, async (ctx) => {
+    ctx.session ??= { ...INITIAL_SESSION }
+    const outputValue = ctx.match[1];
+    ctx.session.voiceOrAudioOut = outputValue;
+    await ctx.reply(
+      `Тип сообщения установлен на ${outputValue}`,
+      Markup.inlineKeyboard([Markup.button.callback("Назад", "settings")], {
+        columns: 3,
+      }).resize()
+    );
+    await ctx.answerCbQuery();
+  });
 
 
-  bot.action(/method_(harvest|crepe|mangio-crepe)/, async (ctx) => {
+
+  bot.action(/method_(harvest|crepe|mangio-crepe|rmvpe)/, async (ctx) => {
     ctx.session ??= { ...INITIAL_SESSION }
     const methodValue = ctx.match[1];
     ctx.session.method = methodValue;

@@ -20,14 +20,8 @@ echo Установка зависимостей для rvc
 pip install -r requirements.txt
 
 cd ../../
-echo Скачивание hubert_base для RVC
-python utils\dowload_hubert.py .\main\hubert_base.pt
-
-echo Установка зависимостей для Silero-TTS
-cd libs\siero-tts-server
-start start.bat
-
-cd ../../
+echo Скачивание hubert_base и rmvpe для RVC
+python utils\dowload_rvc_base.py
 
 cd main
 npm install

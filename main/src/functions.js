@@ -8,7 +8,38 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import pkg from 'number-to-words-ru';
 
+class Semaphore {
+  constructor(count) {
+    this.count = count;
+    this.waiting = [];
+  }
+
+  acquire() {
+    return new Promise((resolve) => {
+      if (this.count > 0) {
+        this.count--;
+        resolve();
+      } else {
+        this.waiting.push(resolve);
+      }
+    });
+  }
+
+  release() {
+    if (this.waiting.length > 0) {
+      const nextInLine = this.waiting.shift();
+      nextInLine();
+    } else {
+      this.count++;
+    }
+  }
+}
+
 const { convert: convertNumberToWordsRu } = pkg;
+const semaphore = new Semaphore(2);
+const semaphore_for_sep = new Semaphore(2);
+const semaphore_for_voice = new Semaphore(2);
+
 
 
 // Указываем путь к ffmpeg
@@ -194,11 +225,11 @@ export const getVocalFilePath = async (searchDirectory) => {
   }
 };
 
-export const getInstrumentalFilePath = async (searchDirectory) => {
+export const getInstrumentalFilePath = async (searchDirectory, sufix = "Kim_Vocal_2") => {
   try {
     const files = await fspr.readdir(searchDirectory);
     for (const file of files) {
-      if (file.includes('(Instrumental)')) {
+      if (file.includes(`(Instrumental)_${sufix}`)) {
         return path.join(searchDirectory, file);
       }
     }
@@ -209,66 +240,66 @@ export const getInstrumentalFilePath = async (searchDirectory) => {
 };
 
 
-export const transformAudio = async (tg_options, sessionPath, audioPath = "", setMp3 = false) => {
+export const transformAudio = async (tg_options, sessionPath, audioPath = "", setMp3 = false, ctx ="") => {
+  // Acquire semaphore before doing any work
+  await semaphore.acquire();
 
-  const method = tg_options.method;
-  const index_ratio = tg_options.featureRatio;
-  const protect_voice = tg_options.protectVoiceless;
-  const pith = tg_options.pith;
-  const mangio_crepe_hop = tg_options.mangioCrepeHop;
-
-  const model_path = tg_options.model_path;
-  let model_index = tg_options.model_index;
-
-  if (model_index === undefined) {
-    model_index = ""
-  }
-
-  let outOggPath = `${sessionPath}/audio_out.ogg`;
-
-  let mp3Path = `${sessionPath}/audio_out.mp3`;
-
-  let outpath;
-
-  console.log(tg_options, sessionPath);
-
-  if (audioPath === "") {
-    audioPath = `${sessionPath}/audio.ogg`;
-  }
-
-  if (setMp3) {
-    outpath = mp3Path;
-  } else {
-    outpath = outOggPath;
-  }
-
-  options = {
-    mode: 'text',
-    pythonPath: config.get("PYTHON_VENV_PATH"),
-    pythonOptions: ['-u'], // get print results in real-time
-    scriptPath: config.get("RVC_SCRIPT_PATH"),
-    args: [
-      pith,
-      audioPath,
-      model_index,
-      method,
-      outpath,
-      model_path,
-      index_ratio,
-      "cuda:0",
-      "True",
-      "3",
-      "0",
-      "1",
-      protect_voice,
-      mangio_crepe_hop
-    ]
-  };
-
-
-
-
+  // Ensure semaphore is released, even if there is an error
   try {
+    const method = tg_options.method;
+    const index_ratio = tg_options.featureRatio;
+    const protect_voice = tg_options.protectVoiceless;
+    const pith = tg_options.pith;
+    const mangio_crepe_hop = tg_options.mangioCrepeHop;
+
+    const model_path = tg_options.model_path;
+    let model_index = tg_options.model_index;
+
+    if (model_index === undefined) {
+      model_index = ""
+    }
+
+    let outOggPath = `${sessionPath}/audio_out.ogg`;
+
+    let mp3Path = `${sessionPath}/audio_out.mp3`;
+
+    let outpath;
+
+    console.log(tg_options, sessionPath);
+
+    if (audioPath === "") {
+      audioPath = `${sessionPath}/audio.ogg`;
+    }
+
+    if (setMp3) {
+      outpath = mp3Path;
+    } else {
+      outpath = outOggPath;
+    }
+
+    options = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("RVC_SCRIPT_PATH"),
+      args: [
+        pith,
+        audioPath,
+        model_index,
+        method,
+        outpath,
+        model_path,
+        index_ratio,
+        "cuda:0",
+        "True",
+        "3",
+        "0",
+        "1",
+        protect_voice,
+        mangio_crepe_hop
+      ]
+    };
+
     const messages = await PythonShell.run('test-infer.py', options);
     console.log("Файл успешно преобразован");
 
@@ -278,8 +309,12 @@ export const transformAudio = async (tg_options, sessionPath, audioPath = "", se
     }
   } catch (err) {
     console.error(err);
+  } finally {
+    // Always release the semaphore
+    semaphore.release();
   }
-}
+};
+
 
 export async function downloadFile(url, path) {
   const writer = fs.createWriteStream(path);
@@ -321,45 +356,59 @@ export async function downloadFromYoutube(url, sessionPath) {
 
 }
 
-export async function separateAudio(sessionPath, filename = "audio.wav") {
-
-
-  let optionss = {
-    mode: 'text',
-    pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
-    pythonOptions: ['-u'], // get print results in real-time
-    scriptPath: config.get("AUDIO_SEP_PATH"),
-    args: [
-      `${sessionPath}/${filename}`,
-      `${sessionPath}`,
-    ]
-  };
-
+export async function separateAudio(sessionPath, filename = "audio.wav", model_name = "Kim_Vocal_2") {
+  // Acquire semaphore before doing any work
+  await semaphore_for_sep.acquire();
 
   try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        `${sessionPath}/${filename}`,
+        `${sessionPath}`,
+        model_name,
+      ]
+    };
+
     const messages = await PythonShell.run('script.py', optionss);
 
-    // const sessionFullPath = config.get("MAIN_PATH") + "\\" + sessionPath
-    const sessionVocalPath = await getVocalFilePath(sessionPath)
-    const sessonInstrumentalPath = await getInstrumentalFilePath(sessionPath)
+    let sessionVocalPath, sessonInstrumentalPath;
+
+    sessionVocalPath = await getVocalFilePath(sessionPath)
+    sessonInstrumentalPath = await getInstrumentalFilePath(sessionPath)
 
     console.log("1", sessionVocalPath, sessonInstrumentalPath, "3")
 
-    // const vocalPath = sessionFullPath + "\\" + sessionVocalPath
-    // const InstrumentalPath = sessionFullPath + "\\" + sessonInstrumentalPath
+    if (model_name === "DeReverb") {
+      sessonInstrumentalPath = await getInstrumentalFilePath(sessionPath, "DeReverb")
+    }
 
-    await convertWavToMp3(sessionVocalPath, `${sessionPath}/vocal.mp3`);
-    await convertWavToMp3(sessonInstrumentalPath, `${sessionPath}/instrumental.mp3`);
-
+    if (model_name === "DeReverb") {
+      await convertWavToMp3(sessonInstrumentalPath, `${sessionPath}/vocal_de_echo.mp3`);
+    } else {
+      await convertWavToMp3(sessionVocalPath, `${sessionPath}/vocal.mp3`);
+      await convertWavToMp3(sessonInstrumentalPath, `${sessionPath}/instrumental.mp3`);
+    }
 
     console.log("Файл успешно преобразован")
   } catch (err) {
     console.error(err);
+  } finally {
+    // Always release the semaphore
+    semaphore_for_sep.release();
   }
-
 }
 
+// Создайте экземпляр семафора
+
+
 export async function createVoice(voice, text, id) {
+  // Acquire semaphore before doing any work
+  await semaphore_for_voice.acquire();
+
   const readyText = processText(text)
   console.log(readyText)
   const data = {
@@ -374,6 +423,9 @@ export async function createVoice(voice, text, id) {
     return response;
   } catch (error) {
     console.error(error);
+  } finally {
+    // Always release the semaphore
+    semaphore_for_voice.release();
   }
 }
 

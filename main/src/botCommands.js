@@ -21,13 +21,15 @@ export async function setBotCommands(bot) {
 }
 
 export function registerBotCommands(bot) {
+  try{
   bot.command("start", async (ctx) => {
     ctx.session = { ...INITIAL_SESSION };
     await ctx.reply("Привет! Я бот для изменения голоса. Для начала работы выберите персонажа /characters .\n\nДля просмотра списка команд введите /help")
     await showMenu(ctx);
-  });
+  })}catch(e){console.log(e)};
 
   bot.command("help", async (ctx) => {
+    try{
     ctx.session = { ...INITIAL_SESSION };
     const message = "Доступные команды:\n" +
       "/start - начать работу с ботом\n" +
@@ -42,9 +44,10 @@ export function registerBotCommands(bot) {
     "/help - показать это сообщение";
     await ctx.reply(message);
     ;
-  });
+  }catch(e){console.log(e)}});
 
   bot.command("cover", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     ctx.session.waitingForCover = true;
     await ctx.reply(
@@ -53,41 +56,50 @@ export function registerBotCommands(bot) {
         columns: 3,
       }).resize()
     );
-  })
+}catch(e){console.log(e)}})
 
   bot.command("menu", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     await showMenu(ctx);
+    }catch(e){console.log(e)}
   })
 
   bot.command("load", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     await loadSettings(ctx);
+    }catch(e){console.log(e)}
   })
 
   bot.command("save", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     // Перед сохранением пресета, спросим у пользователя имя для пресета
     ctx.reply('Пожалуйста, введите имя для вашего пресета:');
     ctx.session.waitForPresetSave = true
+    }catch(e){console.log(e)}
   })
 
 
 
   bot.command("test", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     ctx.session.testVoice = true;
     await ctx.reply("Сейчас будет пройден путь от 0 до 12");
     ;
-  })
+}catch(e){console.log(e)}})
 
   bot.command("id", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     ctx.reply(ctx.session.previousMessageId)
-  })
+}catch(e){console.log(e)}})
 
 
   bot.command("merge", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
 
     ctx.session.mergeAudio = true;
@@ -98,23 +110,26 @@ export function registerBotCommands(bot) {
         columns: 3,
       }).resize()
     );
-  })
+}catch(e){console.log(e)}})
 
 
 
   bot.command("settings", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     await showSettings(ctx);
     ;
-  });
+}catch(e){console.log(e)}});
 
   bot.command("current_settings", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     await showCurrentSettings(ctx);
     ;
-  });
+}catch(e){console.log(e)}});
 
   bot.command("characters", async (ctx) => {
+    try{
     ctx.session ??= { ...INITIAL_SESSION }
     const categoryButtons = Object.keys(groupedCharacters).map((category, index) => {
       return Markup.button.callback(category, `category-${index}`);
@@ -127,7 +142,7 @@ export function registerBotCommands(bot) {
       }).resize()
     );
     ;
-  })
+}catch(e){console.log(e)}})
 
 }
 

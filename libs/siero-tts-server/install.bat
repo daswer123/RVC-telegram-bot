@@ -14,6 +14,4 @@ if exist "%local_path_bat%" (
 
 call venv\Scripts\activate
 
-pip install -r requerments.txt
-
 pause

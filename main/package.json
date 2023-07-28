@@ -19,9 +19,11 @@
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "axios": "^1.4.0",
     "config": "^3.3.9",
+    "es6-promise-pool": "^2.5.0",
     "fluent-ffmpeg": "^2.1.2",
     "glob": "^10.3.1",
     "number-to-words-ru": "^2.3.6",
+    "pm2": "^5.3.0",
     "python-shell": "^5.0.0",
     "telegraf": "^4.12.2"
   }
