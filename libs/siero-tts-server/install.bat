@@ -13,5 +13,8 @@ if exist "%local_path_bat%" (
 )
 
 call venv\Scripts\activate
+pip install silero-api-server==0.2.3
+
+python replace_tts.py
 
 pause
