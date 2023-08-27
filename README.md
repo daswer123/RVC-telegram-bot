@@ -39,8 +39,8 @@ https://github.com/daswer123/tg_rvc_bot/assets/22278673/80639ac0-76b2-4942-a45a-
 5) Бот был протестирован на Windows 10 , RTX 3090, Cuda 11.8
 
 # Credit
-[Mangio-RVC-Fork](https://github.com/Mangio621/Mangio-RVC-Fork) - Модифицированная версия RVC с новыми методами преобразования
-[python-audio-separator](https://github.com/karaokenerds/python-audio-separator) - Разделение аудио на вокал и инструментал с помощью MDX архетектуры
-[Silero TTS](https://github.com/snakers4/silero-models) - TTS на русском языке
-[doremi](https://github.com/jpmchargue/doremi) - Библеотека для автотюна
+1)[Mangio-RVC-Fork](https://github.com/Mangio621/Mangio-RVC-Fork) - Модифицированная версия RVC с новыми методами преобразования
+2)[python-audio-separator](https://github.com/karaokenerds/python-audio-separator) - Разделение аудио на вокал и инструментал с помощью MDX архетектуры
+3)[Silero TTS](https://github.com/snakers4/silero-models) - TTS на русском языке
+4)[doremi](https://github.com/jpmchargue/doremi) - Библеотека для автотюна
 
