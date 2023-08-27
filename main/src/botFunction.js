@@ -258,7 +258,9 @@ export async function processVideo(ctx, sessionPath) {
 // Отправить сообщение всем юзерам
 export async function sendMessageToAllUsers(message, bot) {
   const sessionsDir = './sessions';
-  const userIds = fs.readdirSync(sessionsDir).map(Number);
+  const userIds = fs.readdirSync(sessionsDir)
+                      .map(name => Number(name))
+                      .filter(userId => !Number.isNaN(userId));  // Фильтруем имена, которые не могут быть преобразованы в числа
 
   for (const userId of userIds) {
     try {
