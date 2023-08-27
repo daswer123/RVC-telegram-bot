@@ -7,40 +7,50 @@ import config from "config";
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import pkg from 'number-to-words-ru';
+import { promisify } from 'util';
+import { Semaphore } from './botFunction.js'; 
 
-class Semaphore {
-  constructor(count) {
-    this.count = count;
-    this.waiting = [];
-  }
-
-  acquire() {
-    return new Promise((resolve) => {
-      if (this.count > 0) {
-        this.count--;
-        resolve();
-      } else {
-        this.waiting.push(resolve);
-      }
-    });
-  }
-
-  release() {
-    if (this.waiting.length > 0) {
-      const nextInLine = this.waiting.shift();
-      nextInLine();
-    } else {
-      this.count++;
-    }
-  }
-}
 
 const { convert: convertNumberToWordsRu } = pkg;
-const semaphore = new Semaphore(2);
-const semaphore_for_sep = new Semaphore(2);
-const semaphore_for_voice = new Semaphore(2);
+// const semaphore = new Semaphore(1);
+// const semaphore_for_sep = new Semaphore(1);
+// const semaphore_for_voice = new Semaphore(1);
 
+let semaphore,semaphore_for_sep, semaphore_for_voice;
 
+const readdir = promisify(fs.readdir);
+const readFile = promisify(fs.readFile);
+
+export const getRandomFileContent = async () => {
+  const folderPath = path.resolve('./text');
+  const files = await readdir(folderPath);
+  const textFiles = files.filter(file => path.extname(file) === '.txt');
+
+  if (textFiles.length === 0) return 'No text files found';
+
+  const randomFile = textFiles[Math.floor(Math.random() * textFiles.length)];
+  const content = await readFile(path.join(folderPath, randomFile), 'utf-8');
+
+  return content;
+};
+
+async function readNumbersFromJson() {
+  const path = './config/power.json';
+  let json;
+  if (fs.existsSync(path)) {
+      const data = fs.readFileSync(path, 'utf-8');
+      json = JSON.parse(data);
+  } else {
+      json = {
+          "transform" : "1",
+          "silero" : "1",
+          "separate" : "1"
+      };
+      fs.writeFileSync(path, JSON.stringify(json), 'utf-8');
+  }
+
+  return [Number(json.transform), Number(json.silero), Number(json.separate)];
+}
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -184,7 +194,7 @@ async function convertWavToMp3(inputFile, outputFile) {
   });
 }
 
-async function compressMp3(inputFile, outputFile = null, quality = 2) {
+export async function compressMp3(inputFile, outputFile = null, quality = 2) {
   // Если выходной файл не указан, используем "input"_cut.mp3
   if (outputFile === null) {
     const inputFileWithoutExtension = inputFile.slice(0, inputFile.lastIndexOf('.'));
@@ -239,21 +249,109 @@ export const getInstrumentalFilePath = async (searchDirectory, sufix = "Kim_Voca
   }
 };
 
+export const improveAudio = async (ctx, sessionPath,filename) => {
+  let mp3Path = `${sessionPath}/${filename}`;
 
-export const transformAudio = async (tg_options, sessionPath, audioPath = "", setMp3 = false, ctx ="") => {
+  let string;
+
+  if(ctx.session.echoOn){
+    string = "--echo"
+}
+
+if(ctx.session.reverbOn){
+    string = "--reverb"
+}
+
+if(ctx.session.reverbOn && ctx.session.echoOn){
+    string = "--all"
+}
+
+let optionss = {
+    mode: 'text',
+    pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+    pythonOptions: ['-u'], // get print results in real-time
+    scriptPath: config.get("AUDIO_SEP_PATH"),
+    args: [
+        mp3Path,
+        `${sessionPath}/audio_out_improve.mp3`,
+        string,
+    ]
+};
+
+if(ctx.session.echoOn){
+    optionss.args.push('--echo-delay');
+    optionss.args.push(ctx.session.echoDelay || 0.3);
+    optionss.args.push('--echo-attenuation');
+    optionss.args.push(ctx.session.echoPower || 0.1);
+}
+
+    if(ctx.session.reverbOn){
+        optionss.args.push('--reverb-ratio');
+        optionss.args.push(ctx.session.reverbPower || 0.0005);
+    }
+
+    const messages = await PythonShell.run('effects.py', optionss)
+    return messages
+
+}
+
+export const autotuneAudio = async (ctx, sessionPath,filename) => {
+  let mp3Path = `${sessionPath}/${filename}`;
+  let instrumentPath = `${sessionPath}/instrumental.mp3`;
+
+  const attack = ctx.session.autotune_attack
+  const strength = ctx.session.autotune_strength
+
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        instrumentPath,
+        mp3Path,
+        `${sessionPath}/autotune_vocal.mp3`,
+        attack,
+        strength
+      ]
+    };
+
+    const messages = await PythonShell.run('autotune.py', optionss)
+    return messages
+
+}
+
+
+export const transformAudio = async (ctx, sessionPath, audioPath = "", setMp3 = false, ctxx ="") => {
   // Acquire semaphore before doing any work
+  const [semaphorePower,_,__] = await readNumbersFromJson()
+  semaphore = new Semaphore(semaphorePower);
   await semaphore.acquire();
 
   // Ensure semaphore is released, even if there is an error
   try {
+    const tg_options = ctx.session
     const method = tg_options.method;
-    const index_ratio = tg_options.featureRatio;
-    const protect_voice = tg_options.protectVoiceless;
+    const index_ratio = tg_options.feature_ratio;
+    const protect_voice = tg_options.protect_voiceless;
     const pith = tg_options.pith;
-    const mangio_crepe_hop = tg_options.mangioCrepeHop;
+    const mangio_crepe_hop = tg_options.mangio_crepe_hop;
 
+    let minPich = Number(tg_options.minPich);
+    let maxPich = Number(tg_options.maxPich);
+
+    if(isNaN(minPich)) minPich = 50
+    if(isNaN(maxPich)) maxPich = 1100
+
+    let neuroAutoTune = tg_options.neuroAutoTune
+
+    if(neuroAutoTune === undefined){
+      neuroAutoTune = false
+    }
+
+    // console.log(index_ratio)
     const model_path = tg_options.model_path;
-    let model_index = tg_options.model_index;
+    let model_index = tg_options.index_path;
 
     if (model_index === undefined) {
       model_index = ""
@@ -265,7 +363,7 @@ export const transformAudio = async (tg_options, sessionPath, audioPath = "", se
 
     let outpath;
 
-    console.log(tg_options, sessionPath);
+    // console.log(tg_options, sessionPath);
 
     if (audioPath === "") {
       audioPath = `${sessionPath}/audio.ogg`;
@@ -276,6 +374,8 @@ export const transformAudio = async (tg_options, sessionPath, audioPath = "", se
     } else {
       outpath = outOggPath;
     }
+
+    console.log(neuroAutoTune)
 
     options = {
       mode: 'text',
@@ -296,12 +396,19 @@ export const transformAudio = async (tg_options, sessionPath, audioPath = "", se
         "0",
         "1",
         protect_voice,
-        mangio_crepe_hop
+        mangio_crepe_hop,
+        minPich,
+        maxPich,
+        neuroAutoTune
       ]
     };
 
+    console.log(options.args,sessionPath)
+
     const messages = await PythonShell.run('test-infer.py', options);
     console.log("Файл успешно преобразован");
+
+    logUserSession(ctx,"transform",ctx.session.name)
 
     if (setMp3) {
       await compressMp3(mp3Path);
@@ -314,6 +421,104 @@ export const transformAudio = async (tg_options, sessionPath, audioPath = "", se
     semaphore.release();
   }
 };
+
+// Записывает ID пользователя в файл ban.json
+export function banUser(userId) {
+  const path = './config/ban.json';
+  // Прочитать текущий список забаненных пользователей
+  let bannedUsers = [];
+  if (fs.existsSync(path)) {
+    const data = fs.readFileSync(path, 'utf-8');
+    bannedUsers = JSON.parse(data);
+  }
+
+  // Добавить нового пользователя, если он еще не забанен
+  if (!bannedUsers.includes(userId)) {
+    bannedUsers.push(userId);
+    fs.writeFileSync(path, JSON.stringify(bannedUsers, null, 2));
+  }
+}
+
+// Удаляет ID пользователя из файла ban.json
+export function unbanUser(userId) {
+  const path = './config/ban.json';
+  // Прочитать текущий список забаненных пользователей
+  let bannedUsers = [];
+  if (fs.existsSync(path)) {
+    const data = fs.readFileSync(path, 'utf-8');
+    bannedUsers = JSON.parse(data);
+  }
+
+  // Убрать пользователя, если он забанен
+  const index = bannedUsers.indexOf(userId);
+  if (index !== -1) {
+    bannedUsers.splice(index, 1);
+    fs.writeFileSync(path, JSON.stringify(bannedUsers, null, 2));
+  }
+}
+
+// Возвращает массив с ID всех забаненных пользователей
+export function getBannedUsers() {
+  const path = './config/ban.json';
+  if (fs.existsSync(path)) {
+    const data = fs.readFileSync(path, 'utf-8');
+    return JSON.parse(data);
+  }
+  // Возвращаем пустой массив, если файл не существует
+  return [];
+}
+
+export async function deleteFolderContents(directory) {
+  fs.readdir(directory, (err, files) => {
+      if (err) throw err;
+
+      for (const file of files) {
+          let fullPath = path.join(directory, file);
+          fs.stat(fullPath, (err, stat) => {
+              if (err) throw err;
+
+              if (stat.isDirectory()) {
+                  // recursive delete if the file is a directory
+                  fs.rm(fullPath, { recursive: true, force: true }, (err) => {
+                      if (err) throw err;
+                  });
+              } else {
+                  // delete file only if the file is not 'presets.json'
+                  if (file !== 'presets.json') {
+                      fs.unlink(fullPath, (err) => {
+                          if (err) throw err;
+                      });
+                  }
+              }
+          });
+      }
+  });
+}
+
+
+
+export function logUserSession(ctx,type,extra = "") {
+  const path = './config/logs.json';
+    const uniqueId = ctx.from.id;
+    const date = new Date().toISOString();
+    
+    const log = {
+        uniqueId,
+        type,
+        extra,
+        date
+    };
+
+    let logsArray = [];
+    if (fs.existsSync(path)) {
+        const data = fs.readFileSync(path, 'utf-8');
+        logsArray = JSON.parse(data);
+    }
+
+    logsArray.push(log);
+
+    fs.writeFileSync(path, JSON.stringify(logsArray, null, 4), 'utf-8');
+}
 
 
 export async function downloadFile(url, path) {
@@ -358,6 +563,8 @@ export async function downloadFromYoutube(url, sessionPath) {
 
 export async function separateAudio(sessionPath, filename = "audio.wav", model_name = "Kim_Vocal_2") {
   // Acquire semaphore before doing any work
+  const [__,_,semaphorePower] = await readNumbersFromJson()
+  semaphore_for_sep = new Semaphore(semaphorePower);
   await semaphore_for_sep.acquire();
 
   try {
@@ -377,14 +584,16 @@ export async function separateAudio(sessionPath, filename = "audio.wav", model_n
 
     let sessionVocalPath, sessonInstrumentalPath;
 
-    sessionVocalPath = await getVocalFilePath(sessionPath)
-    sessonInstrumentalPath = await getInstrumentalFilePath(sessionPath)
-
-    console.log("1", sessionVocalPath, sessonInstrumentalPath, "3")
+     
 
     if (model_name === "DeReverb") {
       sessonInstrumentalPath = await getInstrumentalFilePath(sessionPath, "DeReverb")
+    } else {
+      sessionVocalPath = await getVocalFilePath(sessionPath)
+      sessonInstrumentalPath = await getInstrumentalFilePath(sessionPath)
     }
+
+    console.log("1", sessionVocalPath, sessonInstrumentalPath, "3")
 
     if (model_name === "DeReverb") {
       await convertWavToMp3(sessonInstrumentalPath, `${sessionPath}/vocal_de_echo.mp3`);
@@ -402,11 +611,58 @@ export async function separateAudio(sessionPath, filename = "audio.wav", model_n
   }
 }
 
+export async function separateAudioVR(sessionPath, audio_path = "audio.wav", model_path = "URV_Models/hp_5_back.pth",outpath = "") {
+  // Acquire semaphore before doing any work
+  await semaphore_for_sep.acquire();
+
+  try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("RVC_SCRIPT_PATH"),
+      args: [
+        '--model_path', model_path,
+        '--audio_path', `${sessionPath}/${audio_path}`,
+        '--save_path', `${sessionPath + outpath}`
+      ]
+    };
+
+    const messages = await PythonShell.run('infer_uvr5.py', optionss);
+
+    let sessionVocalPath;
+
+    sessionVocalPath = await getVocalFilePath(sessionPath + outpath)
+
+      await convertWavToMp3(sessionVocalPath, `${sessionPath}/vocal_de_back.mp3`);
+
+    console.log("Файл успешно преобразован")
+  } catch (err) {
+    console.error(err);
+  } finally {
+    // Always release the semaphore
+    semaphore_for_sep.release();
+  }
+}
+
 // Создайте экземпляр семафора
+
+export function updateNumbersInJson(transform, silero, separate) {
+  const path = './config/power.json';
+  const json = {
+      "transform" : String(transform),
+      "silero" : String(silero),
+      "separate" : String(separate)
+  };
+
+  fs.writeFileSync(path, JSON.stringify(json), 'utf-8');
+}
 
 
 export async function createVoice(voice, text, id) {
   // Acquire semaphore before doing any work
+  const [__,semaphorePower,_] = await readNumbersFromJson()
+  semaphore_for_voice = new Semaphore(semaphorePower);
   await semaphore_for_voice.acquire();
 
   const readyText = processText(text)

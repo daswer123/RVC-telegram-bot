@@ -29,6 +29,9 @@ cd utils
 echo Скачивание hubert_base и rmvpe для RVC
 python utils\dowload_rvc_base.py
 
+echo Скачивание hubert_base и rmvpe для RVC
+python utils\dowload_uvr_models.py
+
 cd ..
 cd main
 npm install

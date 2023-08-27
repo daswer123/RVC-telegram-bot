@@ -17,3 +17,5 @@ cd ../../
 
 cd main
 call node src/main.js
+
+pause

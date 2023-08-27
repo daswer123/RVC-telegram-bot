@@ -107,6 +107,10 @@ resample_sr=int(sys.argv[11])
 rms_mix_rate=float(sys.argv[12])
 protect=float(sys.argv[13])
 crepe_hop_length = int(sys.argv[14])
+f0_minimum = int(sys.argv[15])
+f0_maximum = int(sys.argv[16])
+autotune_enable = str(sys.argv[17])
+rmvpe_onxx = "rvc_models/rmvpe.onnx"
 print(sys.argv)
 config=Config(device,is_half)
 now_dir=os.getcwd()
@@ -122,6 +126,13 @@ from my_utils import load_audio
 from fairseq import checkpoint_utils
 from scipy.io import wavfile
 import rmvpe
+
+if(autotune_enable == "false"):
+    autotune_enable = False
+else:
+    autotune_enable = True 
+
+print("Autotune" , autotune_enable)
 
 hubert_model=None
 def load_hubert():
@@ -142,7 +153,7 @@ def vc_single(sid,input_audio,f0_up_key,f0_file,f0_method,file_index,index_rate)
     if(hubert_model==None):load_hubert()
     if_f0 = cpt.get("f0", 1)
     # audio_opt=vc.pipeline(hubert_model,net_g,sid,audio,times,f0_up_key,f0_method,file_index,file_big_npy,index_rate,if_f0,f0_file=f0_file)
-    audio_opt=vc.pipeline(hubert_model,net_g,sid,audio,input_audio,times,f0_up_key,f0_method,file_index,index_rate,if_f0,filter_radius,tgt_sr,resample_sr,rms_mix_rate,version,protect,crepe_hop_length,f0_file=f0_file)
+    audio_opt=vc.pipeline(hubert_model,net_g,sid,audio,input_audio,times,f0_up_key,f0_method,file_index,index_rate,if_f0,filter_radius,tgt_sr,resample_sr,rms_mix_rate,version,protect,crepe_hop_length,f0_autotune=autotune_enable,rmvpe_onnx=False,f0_file=f0_file,f0_max=f0_maximum,f0_min=f0_minimum)
     print(times)
     return audio_opt
 

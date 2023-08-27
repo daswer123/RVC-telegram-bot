@@ -10,6 +10,7 @@ if exist "%local_path_bat%" (
     echo %local_path_bat% не найден. Использование глобальной среды.
 )
 
+python -m venv venv
 call venv/scripts/activate
 
 python -m silero_api_server -p 8010
