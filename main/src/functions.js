@@ -34,6 +34,30 @@ export const getRandomFileContent = async () => {
   return content;
 };
 
+export async function convertToOgg(inputPath) {
+  const outputPath = path.format({
+    dir: path.dirname(inputPath),
+    name: path.basename(inputPath, path.extname(inputPath)),
+    ext: '.ogg'
+  });
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .format('ogg')
+      .audioCodec('libopus')
+      .on('end', () => {
+        console.log('Conversion finished');
+        resolve(outputPath);
+      })
+      .on('error', (error) => {
+        console.error('Conversion failed: ' + error.message);
+        reject(error);
+      })
+      .save(outputPath);
+  });
+}
+
+
 async function readNumbersFromJson() {
   const path = './config/power.json';
   let json;
@@ -144,6 +168,22 @@ export const mergeAudioAndVideo = (videoPath, audioPath, outputPath) => {
       .run();
   });
 };
+
+
+export async function slowDownAudioYa(inputFile, speed) {
+  // Создаем имя выходного файла с помощью path
+  const directory = path.dirname(inputFile);
+  const outputFile = path.join(directory, 'generated_voice_slowed.wav');
+
+  return new Promise((resolve, reject) => {
+      ffmpeg(inputFile)
+          .audioFilters(`atempo=${speed}`)
+          .output(outputFile)
+          .on('end', resolve)
+          .on('error', reject)
+          .run();
+  });
+}
 
 
 export const mergeAudioFilesToMp3 = (vocalFile, instrumentalFile, outputFile, ctx) => {
@@ -291,6 +331,27 @@ if(ctx.session.echoOn){
     }
 
     const messages = await PythonShell.run('effects.py', optionss)
+    return messages
+
+}
+
+export const phoneCallEffects = async (ctx, sessionPath,filename) => {
+  let mp3Path = `${sessionPath}/${filename}`;
+
+let optionss = {
+    mode: 'text',
+    pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+    pythonOptions: ['-u'], // get print results in real-time
+    scriptPath: config.get("AUDIO_SEP_PATH"),
+    args: [
+        mp3Path,
+        `${sessionPath}/audio_out_improve.mp3`,
+        // 500,
+        // 1000
+    ]
+};
+
+    const messages = await PythonShell.run('phonecall.py', optionss)
     return messages
 
 }

@@ -8,12 +8,35 @@ import { deleteFolderContents, getRandomFileContent } from "./functions.js";
 const MALE_VOICES = [
   { name: "Aidar", id: "aidar" },
   { name: "Eugene", id: "eugene" },
+  { name: "Levitan", id: "yandex_levitan" },
+  { name: "Zahar", id: "yandex_zahar" },
+  { name: "Silaerkan", id: "yandex_silaerkan" },
+  { name: "Kolya", id: "yandex_kolya" },
+  { name: "Kostya", id: "yandex_kostya" },
+  { name: "Nick", id: "yandex_nick" },
+  { name: "Erkannyavas", id: "yandex_erkannyavas" },
+  { name: "Ermilov", id: "yandex_ermilov" },
+  { name: "Anton Samokhvatov", id: "yandex_anton_samokhvatov" },
+  { name: "VoiceSearch", id: "yandex_voiceSearch" },
+  { name: "Ermil with Tunning", id: "yandex_ermil_with_tunning" },
+  { name: "Robot", id: "yandex_robot" },
+  { name: "Dude", id: "yandex_dude" },
+  { name: "Zombie", id: "yandex_zombie" },
+  { name: "Smoky", id: "yandex_smoky" },
 ];
 
 const FEMALE_VOICES = [
   { name: "Baya", id: "baya" },
   { name: "Kseniya", id: "kseniya" },
   { name: "Xenia", id: "xenia" },
+  { name: "Oksana", id: "yandex_oksana" },
+  { name: "Jane", id: "yandex_jane" },
+  { name: "Nastya", id: "yandex_nastya" },
+  { name: "Sasha", id: "yandex_sasha" },
+  { name: "Zhenya", id: "yandex_zhenya" },
+  { name: "Tanya", id: "yandex_tanya" },
+  { name: "Tatyana Abramova", id: "yandex_tatyana_abramova" },
+  { name: "Alyss", id: "yandex_alyss" },
 ];
 
 function getRandomMaleVoice() {
@@ -101,6 +124,17 @@ export function registerBotActions(bot) {
       Markup.button.callback('Назад', 'menu'),
     ]))
   })
+
+  
+
+  bot.action("toggle_audio_phoneEffect", async (ctx) => {
+    ctx.reply("Эффект телефона успешно включенн")
+    ctx.session.phoneEffect = ctx.session.phoneEffect === true ? false : true
+    ctx.reply(`Эффект телефона ${ctx.session.phoneEffect === true ? "Включен" : "Выключен"}`, Markup.inlineKeyboard([
+      Markup.button.callback('Назад', 'aisettings'),
+    ]))
+  })
+
 
   
   bot.action("toggle_audio_reverb", async (ctx) => {
@@ -296,17 +330,19 @@ bot.action("toggle_audio_effects", async(ctx) => {
 
   // Обработчик для кнопок пресетов
   bot.action(/select_preset:(.+)/, (ctx) => {
-    const presetName = ctx.match[1];
+    try{    
+      const presetName = ctx.match[1];
     // Ответ пользователю
     ctx.reply(`Пресет "${presetName}" выбран. Хотите загрузить его сейчас?`, Markup.inlineKeyboard([
       [Markup.button.callback('Загрузить пресет', `load_preset:${presetName}`), Markup.button.callback('Удалить пресет', `delete_preset:${presetName}`)],
       [Markup.button.callback('Перезаписать пресет', `overwrite_preset:${presetName}`), Markup.button.callback('Меню', 'menu')],
     ]));
+  }catch(err){ctx.reply("Произошла ошибка")}
   });
 
   // Обработчик для кнопки "load_preset"
   bot.action(/load_preset:(.+)/, (ctx) => {
-    
+    try{ 
     const presetName = ctx.match[1];
 
     const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
@@ -336,6 +372,9 @@ bot.action("toggle_audio_effects", async(ctx) => {
         Markup.button.callback('Меню', 'menu')
       ]));
     }
+  }catch(err){
+    ctx.reply("Произошла ошибка")
+  }
   });
 
   bot.action("create_voice_info",async (ctx) => {
@@ -613,7 +652,7 @@ try{
     
     ctx.session.pith = ctx.session.gender.trim() === "male" ? 0 : ctx.session.gender.trim() === "female" ? 12 : 6;
 
-    if (ctx.session.gender === "male") {
+    if (ctx.session.gender.trim() === "male") {
       ctx.session.voiceActor = getRandomMaleVoice();
     } else {
       ctx.session.voiceActor = getRandomFemaleVoice();
@@ -804,9 +843,7 @@ try{
   });
 
   bot.action("set_voice", async (ctx) => {
-    ;
-
-    await ctx.reply(`Выберите желаемый голос для создания голосовой болванки для вашего текста, что бы потом преобразовать её в голос персонажа\nAidar и Eugene мужские\nBaya более мягкий женский голос\nXenia - грубый женский голос\n остальные голоса женские`)
+    await ctx.reply(`Выберите желаемый голос для создания голосовой болванки для вашего текста, что бы потом преобразовать её в голос персонажа\nAidar и Eugene мужские\nBaya более мягкий женский голос\nXenia - грубый женский голос\n остальные голоса женские`);
     const voiceKeyboard = Markup.inlineKeyboard([
       [
         Markup.button.callback("Aidar", "voice_aidar"),
@@ -815,8 +852,52 @@ try{
       [
         Markup.button.callback("Kseniya", "voice_kseniya"),
         Markup.button.callback("Xenia", "voice_xenia"),
+        Markup.button.callback("Baya", "voice_baya"),
       ],
-      [Markup.button.callback("Baya", "voice_baya"), Markup.button.callback("Назад", "settings")],
+      [
+        Markup.button.callback("YANDEX", "some"),
+      ],     
+      [
+        Markup.button.callback("Levitan", "voice_yandex_levitan"),
+        Markup.button.callback("Zahar", "voice_yandex_zahar"),
+        Markup.button.callback("Silaerkan", "voice_yandex_silaerkan"),
+      ],
+      [
+        Markup.button.callback("Oksana", "voice_yandex_oksana"),
+        Markup.button.callback("Jane", "voice_yandex_jane"),
+        Markup.button.callback("Omazh", "voice_yandex_omazh"),
+      ],
+      [
+        Markup.button.callback("Kolya", "voice_yandex_kolya"),
+        Markup.button.callback("Kostya", "voice_yandex_kostya"),
+        Markup.button.callback("Nastya", "voice_yandex_nastya"),
+      ],
+      [
+        Markup.button.callback("Sasha", "voice_yandex_sasha"),
+        Markup.button.callback("Nick", "voice_yandex_nick"),
+        Markup.button.callback("Erkannyavas", "voice_yandex_erkannyavas"),
+      ],
+      [
+        Markup.button.callback("Zhenya", "voice_yandex_zhenya"),
+        Markup.button.callback("Tanya", "voice_yandex_tanya"),
+        Markup.button.callback("Ermilov", "voice_yandex_ermilov"),
+      ],
+      [
+        Markup.button.callback("Anton Samokhvatov", "voice_yandex_anton_samokhvatov"),
+        Markup.button.callback("Tatyana Abramova", "voice_yandex_tatyana_abramova"),
+        Markup.button.callback("VoiceSearch", "voice_yandex_voiceSearch"),
+      ],
+      [
+        Markup.button.callback("Alyss", "voice_yandex_alyss"),
+        Markup.button.callback("Ermil with Tunning", "voice_yandex_ermil_with_tunning"),
+        Markup.button.callback("Robot", "voice_yandex_robot"),
+      ],
+      [
+        Markup.button.callback("Dude", "voice_yandex_dude"),
+        Markup.button.callback("Zombie", "voice_yandex_zombie"),
+        Markup.button.callback("Smoky", "voice_yandex_smoky"),
+      ],
+      [Markup.button.callback("Назад", "settings")],
     ]).resize();
     await ctx.reply("Выберите голос:", voiceKeyboard);
   });
@@ -827,8 +908,48 @@ try{
     { name: "Kseniya", id: "kseniya" },
     { name: "Xenia", id: "xenia" },
     { name: "Eugene", id: "eugene" },
+    { name: "Levitan", id: "yandex_levitan" },
+    { name: "Zahar", id: "yandex_zahar" },
+    { name: "Silaerkan", id: "yandex_silaerkan" },
+    { name: "Oksana", id: "yandex_oksana" },
+    { name: "Jane", id: "yandex_jane" },
+    { name: "Omazh", id: "yandex_omazh" },
+    { name: "Kolya", id: "yandex_kolya" },
+    { name: "Kostya", id: "yandex_kostya" },
+    { name: "Nastya", id: "yandex_nastya" },
+    { name: "Sasha", id: "yandex_sasha" },
+    { name: "Nick", id: "yandex_nick" },
+    { name: "Erkannyavas", id: "yandex_erkannyavas" },
+    { name: "Zhenya", id: "yandex_zhenya" },
+    { name: "Tanya", id: "yandex_tanya" },
+    { name: "Ermilov", id: "yandex_ermilov" },
+    { name: "Anton Samokhvatov", id: "yandex_anton_samokhvatov" },
+    { name: "Tatyana Abramova", id: "yandex_tatyana_abramova" },
+    { name: "VoiceSearch", id: "yandex_voiceSearch" },
+    { name: "Alyss", id: "yandex_alyss" },
+    { name: "Ermil with Tunning", id: "yandex_ermil_with_tunning" },
+    { name: "Robot", id: "yandex_robot" },
+    { name: "Dude", id: "yandex_dude" },
+    { name: "Zombie", id: "yandex_zombie" },
+    { name: "Smoky", id: "yandex_smoky" },
   ];
-
+  
+  bot.action("set_voice", async (ctx) => {
+    await ctx.reply(`Выберите желаемый голос для создания голосовой болванки для вашего текста, что бы потом преобразовать её в голос персонажа.`);
+  
+    const buttons = VOICES.map((v) => Markup.button.callback(v.name, `voice_${v.id}`));
+  
+    // Разделение кнопок на группы по три
+    const buttonRows = [];
+    for (let i = 0; i < buttons.length; i += 3) {
+      buttonRows.push(buttons.slice(i, i + 3));
+    }
+  
+    const voiceKeyboard = Markup.inlineKeyboard(buttonRows).resize();
+  
+    await ctx.reply("Выберите голос:", voiceKeyboard);
+  });
+  
   bot.action(/voice_(.*)/, async (ctx) => {
     const voiceId = ctx.match[1];
     const voice = VOICES.find((v) => v.id === voiceId);
@@ -836,9 +957,9 @@ try{
       await ctx.reply("Голос не найден");
       return;
     }
-
+  
     ctx.session.voiceActor = voice.id;
-
+  
     await ctx.reply(
       `Текстовый голос установлен на ${voice.name}`,
       Markup.inlineKeyboard([Markup.button.callback("Назад", "settings")], {
@@ -846,13 +967,6 @@ try{
       }).resize()
     );
     await ctx.answerCbQuery();
-
-    // // сгенерировать inline кнопки для выбора голоса
-    // const buttons = VOICES.map((v) =>
-    //   Markup.button.callback(v.name, `voice_${v.id}`)
-    // );
-
-    // await ctx.reply("Выберите голос:", Markup.inlineKeyboard(buttons).resize());
   });
 
   bot.action("set_mangio_crepe_hop", async (ctx) => {

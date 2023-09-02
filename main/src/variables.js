@@ -39,6 +39,7 @@ export const INITIAL_SESSION = {
   waitForReverb: false,
   waitForAutotuneAttack: false,
   waitForAutotuneStr: false,
+  phoneEffect : false,
   echoDelay: 0.3,
   echoPower: 0.1,
   reverbPower: 0.0005,

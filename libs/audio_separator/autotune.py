@@ -51,7 +51,7 @@ def main():
     sf.write(mono_path, y, sr, 'PCM_24')
     
     # Применение автотюна к моно аудиофайлу с сохранением высокого качества
-    tune(mono_path, "tuned_vocal.wav", key=key, scale=scale,attack=args.attack, strength=args.strength)
+    tune(mono_path, voc_dir+"/tuned_vocal.wav", key=key, scale=scale,attack=args.attack, strength=args.strength)
     tuned_vocal_path = os.path.join(voc_dir, "tuned_vocal.wav")
     
     # Загрузка отрегулированного вокала и сохранение в формате MP3 с высоким качеством

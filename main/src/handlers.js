@@ -4,8 +4,9 @@ import fs from "fs";
 import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
-import { createVoice, logUserSession } from "./functions.js";
+import { createVoice, logUserSession, slowDownAudioYa } from "./functions.js";
 import { processAudioMessage,  process_youtube_audio, printCurrentTime, saveSuggestion } from "./botFunction.js";
+import { generateSpeechYA } from "./yandexTTS.js";
 
 
 // Settings 
@@ -242,9 +243,18 @@ export const handlePredlog = (ctx) => {
         const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
         const username = ctx.from.username; // получаем ник пользователя
         const sessionPath = `sessions/${uniqueId}/${messageId}`;
-    
-        const { newFilePath, slowedFilePath } = await createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath);
-        writeUsernameFile(sessionPath, username, uniqueId, messageId);
+
+        if(!ctx.session.voiceActor.startsWith("yandex_")){
+          const { newFilePath, slowedFilePath } = await createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath);
+          writeUsernameFile(sessionPath, username, uniqueId, messageId);
+      } else {
+          const speaker = ctx.session.voiceActor.split("_")[1];
+          await generateSpeechYA(sessionPath,"generated_speach.mp3",ctx.message.text,speaker);
+          await slowDownAudioYa(`${sessionPath}/generated_speach.mp3`,ctx.session.voice_speed);
+      }
+
+        const slowedFilePath = `${sessionPath}/generated_voice_slowed.wav`
+        
         await ctx.reply("Текст озвучен, преобразование голоса");
     
         // добавляем голосовое сообщение в очередь

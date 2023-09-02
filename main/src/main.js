@@ -1,6 +1,6 @@
 import { Telegraf, Markup, session } from "telegraf";
 import { message } from "telegraf/filters";
-import { downloadFile, mergeAudioFilesToMp3, createVoice, updateNumbersInJson, banUser, unbanUser } from "./functions.js";
+import { downloadFile, mergeAudioFilesToMp3, createVoice, updateNumbersInJson, banUser, unbanUser, slowDownAudioYa } from "./functions.js";
 import config from "config";
 import fs from "fs";
 import path from "path";
@@ -17,6 +17,7 @@ import { registerBotActions } from "./botActions.js";
 import { downloadFromYoutube } from "./functions.js";
 
 import { handlePredlog, handlePresetSave, handleYoutubeCover, handleSettings, textHandler } from "./handlers.js";
+import { generateSpeechYA } from "./yandexTTS.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -314,6 +315,17 @@ bot.on(message("text"), async (ctx) => {
       return;
     }
     else {
+      const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+      const username = ctx.from.username; // получаем ник пользователя
+      const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+      const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+      // Создаем папку для пользователя, если она еще не существует
+      if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath, { recursive: true });
+      }
+
+      // await ctx.reply(ctx.message.text)
       textHandler(ctx)
     }
   } catch (err) {
@@ -526,7 +538,7 @@ bot.on("audio", async (ctx) => {
 
         // Смешиваем аудиофайлы и сохраняем результат в файле MP3
         const outputFile = `${sessionPath}/merged.mp3`;
-        ctx.reply("Склеиваем вокал и интрументал...")
+        ctx.reply("Склеиваем вокал и инструментал...")
         await mergeAudioFilesToMp3(ctx.session.firstFile, ctx.session.secondFile, outputFile, ctx);
 
         // Отправляем смешанный аудиофайл пользователю
@@ -569,7 +581,7 @@ bot.on("audio", async (ctx) => {
 bot.launch();
 
 // Restart msg
-sendMessageToAllUsers("Бот был перезапущен, все настройки сброшенны\nВведите /start для начала работы", bot)
+// sendMessageToAllUsers("Бот был перезапущен, все настройки сброшенны\nВведите /start для начала работы", bot)
 // sendMessageToAllUsers("Бот был обновлен, все подробности в информационном канале https://t.me/mister_parodist_info", bot)
 // sendMessageToAllUsers("Бот временно не работает, тех.работы", bot)
 

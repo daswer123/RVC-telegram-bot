@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, separateAudioVR, compressMp3, logUserSession, getBannedUsers, improveAudio, autotuneAudio} from "./functions.js";
+import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, separateAudioVR, compressMp3, logUserSession, getBannedUsers, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects} from "./functions.js";
 import { INITIAL_SESSION } from "./variables.js";
 import config from "config";
 import fs from "fs";
@@ -258,9 +258,7 @@ export async function processVideo(ctx, sessionPath) {
 // Отправить сообщение всем юзерам
 export async function sendMessageToAllUsers(message, bot) {
   const sessionsDir = './sessions';
-  const userIds = fs.readdirSync(sessionsDir)
-                      .map(name => Number(name))
-                      .filter(userId => !Number.isNaN(userId));  // Фильтруем имена, которые не могут быть преобразованы в числа
+  const userIds = fs.readdirSync(sessionsDir).map(Number);
 
   for (const userId of userIds) {
     try {
@@ -507,8 +505,15 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
 
     await ctx.sendChatAction("upload_audio");
 
-    if(ctx.session.reverbOn || ctx.session.echoOn){
-      await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
+    
+
+    if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
+
+      if(ctx.session.phoneEffect){
+        await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
+      } else {
+        await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
+      }    
       
       await ctx.sendAudio({
         source: `${sessionPath}/audio_out_improve.mp3`,
@@ -531,8 +536,18 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
     const filePath = await transformAudio(ctx, sessionPath, "", true);
 
     await ctx.sendChatAction("upload_audio");
-    if(ctx.session.reverbOn || ctx.session.echoOn){
-      await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
+
+    if(ctx.session.phoneEffect){
+      await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
+    }
+
+    if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
+
+      if(ctx.session.phoneEffect){
+        await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
+      } else {
+        await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
+      }
       
       await ctx.sendAudio({
         source: `${sessionPath}/audio_out_improve.mp3`,
@@ -549,8 +564,17 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
     const filePath = await transformAudio(ctx, sessionPath, "", true);
     await ctx.sendChatAction("upload_audio");
 
-    if(ctx.session.reverbOn || ctx.session.echoOn){
-      await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
+    if(ctx.session.phoneEffect){
+      await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
+    }
+
+    if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
+
+      if(ctx.session.phoneEffect){
+        await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
+      } else {
+        await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
+      }
       
       // await ctx.sendVoice({
       //   source: `${sessionPath}/audio_out_improve.mp3`,
@@ -561,7 +585,7 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
     } 
 
     if(ctx.session.voiceOrAudioOut === "audio"){
-      if(ctx.session.reverbOn || ctx.session.echoOn){
+      if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
       await ctx.sendAudio({
         source: `${sessionPath}/audio_out_improve.mp3`,
       });
@@ -573,14 +597,16 @@ export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", 
       return
     }
     } else {
-      if(ctx.session.reverbOn || ctx.session.echoOn){
+      if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
+      await convertToOgg(`${sessionPath}/audio_out_improve.mp3`)
       await ctx.sendVoice({
-        source: `${sessionPath}/audio_out_improve.mp3`,
+        source: `${sessionPath}/audio_out_improve.ogg`,
       });
       return
     } else {
+      await convertToOgg(`${sessionPath}/audio_out_cut.mp3`)
       await ctx.sendVoice({
-        source: `${sessionPath}/audio_out_cut.mp3`,
+        source: `${sessionPath}/audio_out_cut.ogg`,
       });
       return
     }
@@ -600,6 +626,7 @@ export async function deletePreviousMessage(ctx) {
 }
 
 export const loadSettings = async (ctx) => {
+  try{
   const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
   const sessionPath = path.join('sessions', String(uniqueId));
   const presetsFilePath = path.join(sessionPath, 'presets.json');
@@ -631,6 +658,20 @@ export const loadSettings = async (ctx) => {
     ctx.reply('У вас нет сохраненных пресетов.', Markup.inlineKeyboard([
       Markup.button.callback('Меню', 'menu')
     ]));
+  }
+}catch(err){
+    ctx.reply("Произошла ошибка, файл с пресетами был удален")
+
+    const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+    const sessionPath = path.join('sessions', String(uniqueId));
+    const presetsFilePath = path.join(sessionPath, 'presets.json');
+    if (fs.existsSync(presetsFilePath)) {
+      fs.unlink(presetsFilePath, (err) => {
+        if (err) {
+          console.error(`Ошибка при удалении файла: ${err}`);
+        }
+      });
+    }
   }
 }
 
@@ -823,7 +864,7 @@ export async function showAICoverSettings(ctx) {
     [Markup.button.callback(`Громкость инструментала: ${session.instrumnet_volume}`, "set_instrumental_volume")],
     [Markup.button.callback("Модификаторы при разделении аудио", "set_audio_process_power")],
     [Markup.button.callback("Включить реверберацию", "toggle_audio_reverb"), Markup.button.callback("Включить эхо", "toggle_audio_echo")],
-    [Markup.button.callback("Включить автотюн", "toggle_audio_autotune")],
+    [Markup.button.callback("Включить автотюн", "toggle_audio_autotune"),Markup.button.callback("Включить эффект телефона", "toggle_audio_phoneEffect")],
     [Markup.button.callback("Настройка эффектов", "effects_settings")],
     [Markup.button.callback("Меню", "menu")],
 ]).resize();
