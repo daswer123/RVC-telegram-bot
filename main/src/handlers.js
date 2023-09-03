@@ -5,8 +5,15 @@ import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
 import { createVoice, logUserSession, slowDownAudioYa } from "./functions.js";
-import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, showMenu, noteOctaveToFrequency } from "./botFunction.js";
+import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, noteOctaveToFrequency } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";
+
+// import { registerAdminBotActions } from "./admin/botActions.js";
+// import { registerCreateMenuBotActions } from "./createModel/botActions.js";
+// import { showCurrentSettings, showMenu } from "./menus/mainMenu.js";
+// import { showSettings } from "./menus/settingsMenu.js";
+// import { showAICoverSettings } from "./menus/aicoverMenu.js";
+// import { showEffectsSettings } from "./menus/effectsMenu.js";
 
 
 // Settings 

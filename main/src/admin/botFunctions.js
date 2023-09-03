@@ -1,8 +1,9 @@
 import fs from "fs"
+import path from "path";
 import { deleteFolderContents } from "../functions.js";
 
 
-const path = './config/logs.json';
+const logPath = './config/logs.json';
 const sessionsDir = './sessions/';
 
 export const getUserIds = () => {
@@ -29,7 +30,7 @@ export const getUserInfo = async (ctx, userId) => {
 
 // Функция для чтения и парсинга логов
 export const getLogs = () => {
-    const data = fs.readFileSync(path, 'utf-8');
+    const data = fs.readFileSync(logPath, 'utf-8');
     return JSON.parse(data);
   };
   
@@ -127,28 +128,28 @@ export async function sendMessageToAllUsers(message, bot) {
 
   // Записывает ID пользователя в файл ban.json
 export function banUser(userId) {
-    const path = './config/ban.json';
+    const banPath = './config/ban.json';
     // Прочитать текущий список забаненных пользователей
     let bannedUsers = [];
-    if (fs.existsSync(path)) {
-      const data = fs.readFileSync(path, 'utf-8');
+    if (fs.existsSync(banPath)) {
+      const data = fs.readFileSync(banPath, 'utf-8');
       bannedUsers = JSON.parse(data);
     }
   
     // Добавить нового пользователя, если он еще не забанен
     if (!bannedUsers.includes(userId)) {
       bannedUsers.push(userId);
-      fs.writeFileSync(path, JSON.stringify(bannedUsers, null, 2));
+      fs.writeFileSync(banPath, JSON.stringify(bannedUsers, null, 2));
     }
   }
   
   // Удаляет ID пользователя из файла ban.json
   export function unbanUser(userId) {
-    const path = './config/ban.json';
+    const banPath = './config/ban.json';
     // Прочитать текущий список забаненных пользователей
     let bannedUsers = [];
-    if (fs.existsSync(path)) {
-      const data = fs.readFileSync(path, 'utf-8');
+    if (fs.existsSync(banPath)) {
+      const data = fs.readFileSync(banPath, 'utf-8');
       bannedUsers = JSON.parse(data);
     }
   
@@ -162,11 +163,49 @@ export function banUser(userId) {
   
   // Возвращает массив с ID всех забаненных пользователей
   export function getBannedUsers() {
-    const path = './config/ban.json';
-    if (fs.existsSync(path)) {
-      const data = fs.readFileSync(path, 'utf-8');
+    const banPath = './config/ban.json';
+    if (fs.existsSync(banPath)) {
+      const data = fs.readFileSync(banPath, 'utf-8');
       return JSON.parse(data);
     }
     // Возвращаем пустой массив, если файл не существует
+    return [];
+  }
+
+
+  export async function removeFromJsonFile(userId, date) {
+    const jsonFilePath = path.join('waitForModel.json');
+  
+    // сначала проверяем, существует ли файл
+    if (fs.existsSync(jsonFilePath)) {
+      // если файл существует, читаем его содержимое
+      const fileContent = await fs.readFileSync(jsonFilePath);
+      // преобразуем содержимое файла в объект JavaScript
+      const entries = JSON.parse(fileContent);
+  
+      // удаляем запись пользователя
+      console.log(date,userId)
+      const updatedEntries = entries.filter(entry => !(entry.id === userId && entry.date === date));
+  
+      // записываем обновленный список обратно в файл
+      fs.writeFileSync(jsonFilePath, JSON.stringify(updatedEntries, null, 2));
+    }
+}
+
+
+ export async function readJsonFile() {
+    const jsonFilePath = path.join('waitForModel.json');
+    if (fs.existsSync(jsonFilePath)) {
+      const fileContent = fs.readFileSync(jsonFilePath);
+      const entries = JSON.parse(fileContent);
+      // Проверяем, являются ли записи массивом
+      if (Array.isArray(entries)) {
+        return entries;
+      } else {
+        console.log('File content is not an array');
+        return [];
+      }
+    }
+    console.log('File does not exist');
     return [];
   }

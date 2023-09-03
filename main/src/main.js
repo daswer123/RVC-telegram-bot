@@ -1,6 +1,6 @@
 import { Telegraf, Markup, session } from "telegraf";
 import { message } from "telegraf/filters";
-import { downloadFile, mergeAudioFilesToMp3, createVoice, updateNumbersInJson, banUser, unbanUser } from "./functions.js";
+import { downloadFile, mergeAudioFilesToMp3 } from "./functions.js";
 import config from "config";
 import fs from "fs";
 import path from "path";
@@ -9,16 +9,17 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
 import { INITIAL_SESSION } from "./variables.js"
 import { setBotCommands, registerBotCommands } from "./botCommands.js";
-import { showMenu, processAudioMessage, is_youtube_url, separateAudioBot, printCurrentTime, processVideo, saveSuggestion, processAiCover, Semaphore, protectBot, showCreateMenu,checkForBan, noteOctaveToFrequency, createSessionFolder } from "./botFunction.js";
+import { processAudioMessage, is_youtube_url, separateAudioBot, printCurrentTime, processVideo, processAiCover, checkForBan, createSessionFolder } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
-import { downloadFromYoutube } from "./functions.js";
 
 import { handlePredlog, handlePresetSave, handleYoutubeCover, handleSettings, textHandler, separateHanlder } from "./handlers.js";
-import { generateSpeechYA } from "./yandexTTS.js";
-import { sendMessageToAllUsers,sendMessageToUser } from "./admin/botFunctions.js";
+import { sendMessageToAllUsers } from "./admin/botFunctions.js";
 import { adminHandler } from "./admin/handler.js";
 import { effectHanlder } from "./effects/handler.js";
 import { createModelHanlder } from "./createModel/handler.js";
+
+
+import { showMenu } from "./menus/mainMenu.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);

@@ -1,3 +1,5 @@
+import { Markup } from "telegraf";
+
 export async function createModelHanlder(ctx) {
     try {
 
@@ -37,3 +39,14 @@ export async function createModelHanlder(ctx) {
         console.log(err)
     }
 }
+
+
+export async function handleMissingModel(ctx) {
+    if(!ctx.session.voiceModelName) {
+      await ctx.reply("Перед заканчивать создание, вы должны инициализировать модель", Markup.inlineKeyboard([
+        Markup.button.callback('Инициализировать модель', 'create_voice_name')
+      ]))
+      return false
+    }
+    return true
+  }

@@ -1,4 +1,4 @@
-import { showAdminMenu } from "./menu.js"
+import { showAdminMenu } from "../menus/adminMenu.js"
 
 export async function registerAdminCommands(bot) {
     bot.command("admin", async (ctx) => {

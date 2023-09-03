@@ -1,8 +1,11 @@
-import { showMenu, showSettings, showCurrentSettings, loadSettings, showAICoverSettings } from "./botFunction.js";
 import { characters } from "./variables.js";
 import { Markup } from "telegraf";
 import { groupCharactersByCategory } from "./botActions.js";
 import { registerAdminCommands } from "./admin/botCommands.js";
+import { showCurrentSettings, showMenu } from "./menus/mainMenu.js";
+import { showSettings } from "./menus/settingsMenu.js";
+import { loadSettings } from "./botFunction.js";
+import { showAICoverSettings } from "./menus/aicoverMenu.js";
 
 const groupedCharacters = groupCharactersByCategory(characters);
 
