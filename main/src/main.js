@@ -12,7 +12,7 @@ import { setBotCommands, registerBotCommands } from "./botCommands.js";
 import { processAudioMessage, is_youtube_url, separateAudioBot, printCurrentTime, processVideo, processAiCover, checkForBan, createSessionFolder } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
 
-import { handlePredlog, handlePresetSave, handleYoutubeCover, handleSettings, textHandler, separateHanlder } from "./handlers.js";
+import { handlePredlog, handleYoutubeCover, textHandler, separateHanlder } from "./handlers.js";
 import { sendMessageToAllUsers } from "./admin/botFunctions.js";
 import { adminHandler } from "./admin/handler.js";
 import { effectHanlder } from "./effects/handler.js";
@@ -20,6 +20,8 @@ import { createModelHanlder } from "./createModel/handler.js";
 
 
 import { showMenu } from "./menus/mainMenu.js";
+import { handlePresetSave } from "./presets/handler.js";
+import { handleSettings } from "./settings/handler.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -38,17 +40,17 @@ bot.use((ctx, next) => {
     ctx.session = { ...INITIAL_SESSION };
   }
 
-  try{
-  if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
-    
-    ctx.session = {...ctx.session.loadConfig};
-    
-    // очистка объекта loadConfig после присвоения сессии
-    ctx.session.loadConfig = {};
-  } 
-}catch(err){
-  console.log("err")
-}
+  try {
+    if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
+
+      ctx.session = { ...ctx.session.loadConfig };
+
+      // очистка объекта loadConfig после присвоения сессии
+      ctx.session.loadConfig = {};
+    }
+  } catch (err) {
+    console.log("err")
+  }
 
   next()
 });
@@ -71,7 +73,7 @@ bot.command("start", async (ctx) => {
 
 bot.on("video", async (ctx) => {
   // if (protectBot(ctx)) return
-  if(await checkForBan(ctx)) return
+  if (await checkForBan(ctx)) return
   try {
 
 
@@ -84,7 +86,7 @@ bot.on("video", async (ctx) => {
       fs.mkdirSync(sessionPath, { recursive: true });
     }
     await processVideo(ctx, sessionPath)
-    await logUserSession(ctx,"video")
+    await logUserSession(ctx, "video")
   } catch (err) {
     ctx.reply("Произошла ошибка при обработке видео, повторите снова, возможно ваше видео слишком большое, 20мб или больше")
   }
@@ -122,13 +124,13 @@ bot.on(message("text"), async (ctx) => {
 
 bot.on("voice", async (ctx) => {
   // if (protectBot(ctx)) return
-  if(await checkForBan(ctx)) return
+  if (await checkForBan(ctx)) return
 
   try {
 
     if (ctx.session.waitForVoice) {
       const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-      const folderName = ctx.session.voiceModelName 
+      const folderName = ctx.session.voiceModelName
       let voicePath = `train_voice/${uniqueId}/${folderName}`;
 
       // создаем папку сессии, если она еще не существует
@@ -194,7 +196,7 @@ bot.on("voice", async (ctx) => {
 
 bot.on("audio", async (ctx) => {
   // if (protectBot(ctx)) return
-  if(await checkForBan(ctx)) return
+  if (await checkForBan(ctx)) return
 
   const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
   const username = ctx.from.username; // получаем ник пользователя
@@ -205,7 +207,7 @@ bot.on("audio", async (ctx) => {
 
     if (ctx.session.waitForVoice) {
       const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-      const folderName = ctx.session.voiceModelName 
+      const folderName = ctx.session.voiceModelName
       let voicePath = `train_voice/${uniqueId}/${folderName}`;
 
       // создаем папку сессии, если она еще не существует

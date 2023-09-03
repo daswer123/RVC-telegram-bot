@@ -5,7 +5,7 @@ import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
 import { createVoice, logUserSession, slowDownAudioYa } from "./functions.js";
-import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, noteOctaveToFrequency } from "./botFunction.js";
+import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";
 
 // import { registerAdminBotActions } from "./admin/botActions.js";
@@ -16,45 +16,6 @@ import { generateSpeechYA } from "./yandexTTS.js";
 // import { showEffectsSettings } from "./menus/effectsMenu.js";
 
 
-// Settings 
-const settingsConfig = {
-  settingPith: {
-    name: "Pith",
-    minValue: -24,
-    maxValue: 24,
-  },
-  settingMangioCrepeHop: {
-    name: "Mangio Crepe Hop",
-    minValue: 64,
-    maxValue: 250,
-  },
-  settingFeatureRatio: {
-    name: "Feature Ratio",
-    minValue: 0,
-    maxValue: 1,
-  },
-  settingProtectVoiceless: {
-    name: "Protect Voiceless",
-    minValue: 0,
-    maxValue: 0.5,
-  },
-  settingVocalVolume: {
-    name: "Voice volume",
-    minValue: 0,
-    maxValue: 3,
-  },
-  settingInstrumentVolume: {
-    name: "Instrumnet volume",
-    minValue: 0,
-    maxValue: 3,
-  },
-  settingVoiceSpeed: {
-    name: "Voice Speed",
-    minValue: 0.2,
-    maxValue: 1.5,
-  },
-};
-
 
 // Handlers
 export const handlePredlog = (ctx) => {
@@ -64,39 +25,6 @@ export const handlePredlog = (ctx) => {
     Markup.button.callback('Меню', 'menu')
   ]));
   ctx.session.waitForPredlog = false;
-  return true;
-}
-
-export const handlePresetSave = (ctx) => {
-  ctx.session.waitForPresetSave = false;
-  const presetName = ctx.message.text;
-
-  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-  const sessionPath = path.join('sessions', String(uniqueId));
-  const presetsFilePath = path.join(sessionPath, 'presets.json');
-
-  // Создаем папку для пользователя, если она еще не существует
-  if (!fs.existsSync(sessionPath)) {
-    fs.mkdirSync(sessionPath, { recursive: true });
-  }
-
-  let presets = {};
-  // Если файл presets.json уже существует, прочитаем его
-  if (fs.existsSync(presetsFilePath)) {
-    const presetsFileContent = fs.readFileSync(presetsFilePath);
-    presets = JSON.parse(presetsFileContent);
-  }
-
-  // Добавляем новый пресет
-  presets[presetName] = ctx.session;
-
-  // Сохраняем обновленные пресеты обратно в файл
-  fs.writeFileSync(presetsFilePath, JSON.stringify(presets));
-
-  // Ответ пользователю
-  ctx.reply(`Пресет "${presetName}" успешно сохранен.`, Markup.inlineKeyboard([
-    Markup.button.callback('Меню', 'menu')
-  ]));
   return true;
 }
 
@@ -116,119 +44,7 @@ export const handleYoutubeCover = (ctx) => {
   return true;
 }
 
-export const handleSettings = async (ctx) => {
 
-  if (ctx.session.waitForMinPich) {
-    const input = ctx.message.text; // ввод пользователя
-
-    // Проверяем, ввел ли пользователь частоту в Гц (число от 1 до 16000)
-    const hzValue = parseFloat(input);
-    if (hzValue >= 1 && hzValue <= 16000) {
-      // прямо записываем значение в Гц
-      ctx.session.minPich = hzValue;
-      ctx.reply(`Значение в ${ctx.session.minPich} было сохраннено`,Markup.inlineKeyboard([Markup.button.callback("Назад", "settings"), Markup.button.callback("Меню", "menu")], {
-        columns: 3,
-      }).resize())
-    } else {
-      // Проверяем, ввел ли пользователь пару [нота][октава]
-      const noteMatch = input.match(/^([A-G]b?#?)(-?\d+)$/i);
-      if (noteMatch) {
-        const note = noteMatch[1];
-        const octave = parseInt(noteMatch[2], 10);
-        // конвертируем [нота][октава] в Гц и записываем
-        ctx.session.minPich = Math.floor(noteOctaveToFrequency(note, octave));
-        ctx.reply(`Значение в ${ctx.session.minPich} было сохраннено`,Markup.inlineKeyboard([Markup.button.callback("Назад", "settings"), Markup.button.callback("Меню", "menu")], {
-          columns: 3,
-        }).resize())
-      } else {
-        ctx.reply("Неверный ввод, вводите на английской раскладке или значения от 1 до 16000")
-        // Неверный ввод, можно отправить сообщение об ошибке
-      }
-    }
-
-    ctx.session.waitForMinPich = false
-    return true
-  }
-
-  if (ctx.session.waitForMaxPich) {
-    const input = ctx.message.text; // ввод пользователя
-
-    // Проверяем, ввел ли пользователь частоту в Гц (число от 1 до 16000)
-    const hzValue = parseFloat(input);
-    if (hzValue >= 1 && hzValue <= 16000) {
-      // прямо записываем значение в Гц
-      ctx.session.maxPich = hzValue;
-      ctx.reply(`Значение в ${ctx.session.maxPich} было сохраннено`,Markup.inlineKeyboard([Markup.button.callback("Назад", "settings"), Markup.button.callback("Меню", "menu")], {
-        columns: 3,
-      }).resize())
-    } else {
-      // Проверяем, ввел ли пользователь пару [нота][окtава]
-      const noteMatch = input.match(/^([A-G]b?#?)(-?\d+)$/i);
-      if (noteMatch) {
-        const note = noteMatch[1];
-        const octave = parseInt(noteMatch[2], 10);
-        // конвертируем [нота][окtава] в Гц и записываем
-        ctx.session.maxPich = Math.floor(noteOctaveToFrequency(note, octave));
-        ctx.reply(`Значение в ${ctx.session.maxPich} было сохраннено`,Markup.inlineKeyboard([Markup.button.callback("Назад", "settings"), Markup.button.callback("Меню", "menu")], {
-          columns: 3,
-        }).resize())
-      } else {
-        ctx.reply("Неверный ввод, вводите на английской раскладке или значения от 1 до 16000")
-        // Неверный ввод, можно отправить сообщение об ошибке
-      }
-    }
-
-    ctx.session.waitForMaxPich = false
-    return true
-  }
-
-  // Hanlde default setting
-
-  const value = parseFloat(ctx.message.text);
-  let setting;
-
-  for (const key in settingsConfig) {
-    if (ctx.session[key]) {
-      setting = settingsConfig[key];
-      break;
-    }
-  }
-
-  if (setting && value >= setting.minValue && value <= setting.maxValue) {
-    const settingKey = setting.name.toLowerCase().replace(/ /g, "_");
-    ctx.session[settingKey] = value;
-
-    console.log(settingKey);
-    console.log(ctx.session[settingKey]);
-
-    Object.keys(settingsConfig).forEach(key => {
-      ctx.session[key] = false;
-    });
-
-    if (settingKey === "voice_volume" || settingKey === "instrumnet_volume") {
-      await ctx.reply(
-        `${setting.name} установлен на ${value}`,
-        Markup.inlineKeyboard([Markup.button.callback("Назад", "ai_settings"), Markup.button.callback("Меню", "menu")], {
-          columns: 3,
-        }).resize()
-      );
-    } else {
-      await ctx.reply(
-        `${setting.name} установлен на ${value}`,
-        Markup.inlineKeyboard([Markup.button.callback("Назад", "settings"), Markup.button.callback("Меню", "menu")], {
-          columns: 3,
-        }).resize()
-      );
-    }
-
-    return true;
-  } else if (setting) {
-    await ctx.reply(`Пожалуйста, введите корректное значение ${setting.name} от ${setting.minValue} до ${setting.maxValue}`);
-    return true;
-  }
-
-  return Promise.resolve(false)
-}
 
 
 async function createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath) {
@@ -331,14 +147,6 @@ async function processVoiceMessagesQueue(ctx, slowedFilePath, sessionPath) {
 
   ctx.state.processingVoiceMessages = false;
 }
-
-
-
-
-
-
-
-
 
 
 

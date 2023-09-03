@@ -1,11 +1,11 @@
 import { characters } from "./variables.js";
 import { Markup } from "telegraf";
-import { groupCharactersByCategory } from "./botActions.js";
 import { registerAdminCommands } from "./admin/botCommands.js";
 import { showCurrentSettings, showMenu } from "./menus/mainMenu.js";
 import { showSettings } from "./menus/settingsMenu.js";
 import { loadSettings } from "./botFunction.js";
 import { showAICoverSettings } from "./menus/aicoverMenu.js";
+import { groupCharactersByCategory } from "./characters/botFunctions.js";
 
 const groupedCharacters = groupCharactersByCategory(characters);
 
@@ -28,7 +28,7 @@ export async function setBotCommands(bot) {
 
 export function registerBotCommands(bot) {
   bot.command("help", async (ctx) => {
-    try{
+    try {
       const message = "Доступные команды:\n" +
         "/start - начать работу с ботом\n" +
         "/characters - выбрать персонажа\n" +
@@ -44,7 +44,7 @@ export function registerBotCommands(bot) {
         "/help - показать это сообщение";
 
       await ctx.reply(message);
-    } catch(e) {
+    } catch (e) {
       console.log(e);
     }
   });
@@ -52,113 +52,120 @@ export function registerBotCommands(bot) {
   registerAdminCommands(bot)
 
   bot.command("aisettings", async (ctx) => {
-    
+
     await showAICoverSettings(ctx);
   });
 
   bot.command("cover", async (ctx) => {
-    try{
-    
-    ctx.session.waitingForCover = true;
-    await ctx.reply(
-      "Вы можете создать ИИ кавер с голосом вашего персонажа\n\nПеред тем как начать настройте высоту тона персонажа в настройках, что бы он соответсвовал голосу певца\nОбычно если у вас Муж. голос и песня с муж. Голосом то ставьте Pith 0\nЕсли у вас муж. голос, а поёт девушка то ставьте Pitch 12\nИ все тоже самое для женского голоса только наоборот\n\nИмейте ввиду что под разные песни нужно корректировать Pitch\n\nЧто бы отменить текущий режим введите любые буквы\n\nОтправьте ссылку на ютуб или загрузите боту напрямую аудиофайл ",
-      Markup.inlineKeyboard([Markup.button.callback("Меню", "menu")], {
-        columns: 3,
-      }).resize()
-    );
-}catch(e){console.log(e)}})
+    try {
+
+      ctx.session.waitingForCover = true;
+      await ctx.reply(
+        "Вы можете создать ИИ кавер с голосом вашего персонажа\n\nПеред тем как начать настройте высоту тона персонажа в настройках, что бы он соответсвовал голосу певца\nОбычно если у вас Муж. голос и песня с муж. Голосом то ставьте Pith 0\nЕсли у вас муж. голос, а поёт девушка то ставьте Pitch 12\nИ все тоже самое для женского голоса только наоборот\n\nИмейте ввиду что под разные песни нужно корректировать Pitch\n\nЧто бы отменить текущий режим введите любые буквы\n\nОтправьте ссылку на ютуб или загрузите боту напрямую аудиофайл ",
+        Markup.inlineKeyboard([Markup.button.callback("Меню", "menu")], {
+          columns: 3,
+        }).resize()
+      );
+    } catch (e) { console.log(e) }
+  })
 
   bot.command("menu", async (ctx) => {
-    try{
-    
-    await showMenu(ctx);
-    }catch(e){console.log(e)}
+    try {
+
+      await showMenu(ctx);
+    } catch (e) { console.log(e) }
   })
 
   bot.command("load", async (ctx) => {
-    try{
-    
-    await loadSettings(ctx);
-    }catch(e){console.log(e)}
+    try {
+
+      await loadSettings(ctx);
+    } catch (e) { console.log(e) }
   })
 
   bot.command("save", async (ctx) => {
-    try{
-    
-    // Перед сохранением пресета, спросим у пользователя имя для пресета
-    ctx.reply('Пожалуйста, введите имя для вашего пресета:');
-    ctx.session.waitForPresetSave = true
-    }catch(e){console.log(e)}
+    try {
+
+      // Перед сохранением пресета, спросим у пользователя имя для пресета
+      ctx.reply('Пожалуйста, введите имя для вашего пресета:');
+      ctx.session.waitForPresetSave = true
+    } catch (e) { console.log(e) }
   })
 
   bot.command("separate", async (ctx) => {
-    try{
-    // Перед сохранением пресета, спросим у пользователя имя для пресета
-    ctx.reply('Киньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
-    ctx.session.waitForSeparate = true
-    }catch(e){console.log(e)}
+    try {
+      // Перед сохранением пресета, спросим у пользователя имя для пресета
+      ctx.reply('Киньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
+      ctx.session.waitForSeparate = true
+    } catch (e) { console.log(e) }
   })
 
   bot.command("test", async (ctx) => {
-    try{
-    
-    ctx.session.testVoice = true;
-    await ctx.reply("Сейчас будет пройден путь от 0 до 12");
-    ;
-}catch(e){console.log(e)}})
+    try {
+
+      ctx.session.testVoice = true;
+      await ctx.reply("Сейчас будет пройден путь от 0 до 12");
+      ;
+    } catch (e) { console.log(e) }
+  })
 
   bot.command("id", async (ctx) => {
-    try{
-    
-    ctx.reply(ctx.session.previousMessageId)
-}catch(e){console.log(e)}})
+    try {
+
+      ctx.reply(ctx.session.previousMessageId)
+    } catch (e) { console.log(e) }
+  })
 
 
   bot.command("merge", async (ctx) => {
-    try{
-    
+    try {
 
-    ctx.session.mergeAudio = true;
 
-    await ctx.reply(
-      "Загрузите 2 аудиофайла для смешивания. Первое должно быть вокалом а второе инструменталкой.",
-      Markup.inlineKeyboard([Markup.button.callback("Меню", "menu")], {
-        columns: 3,
-      }).resize()
-    );
-}catch(e){console.log(e)}})
+      ctx.session.mergeAudio = true;
+
+      await ctx.reply(
+        "Загрузите 2 аудиофайла для смешивания. Первое должно быть вокалом а второе инструменталкой.",
+        Markup.inlineKeyboard([Markup.button.callback("Меню", "menu")], {
+          columns: 3,
+        }).resize()
+      );
+    } catch (e) { console.log(e) }
+  })
 
 
 
   bot.command("settings", async (ctx) => {
-    try{
-    
-    await showSettings(ctx);
-    ;
-}catch(e){console.log(e)}});
+    try {
+
+      await showSettings(ctx);
+      ;
+    } catch (e) { console.log(e) }
+  });
 
   bot.command("current_settings", async (ctx) => {
-    try{
-    
-    await showCurrentSettings(ctx);
-    ;
-}catch(e){console.log(e)}});
+    try {
+
+      await showCurrentSettings(ctx);
+      ;
+    } catch (e) { console.log(e) }
+  });
 
   bot.command("characters", async (ctx) => {
-    try{
-    
-    const categoryButtons = Object.keys(groupedCharacters).map((category, index) => {
-      return Markup.button.callback(category, `category-${index}`);
-    });
+    try {
 
-    await ctx.reply(
-      "Выберите категорию:",
-      Markup.inlineKeyboard([...categoryButtons, Markup.button.callback("Назад", "menu")], {
-        columns: 3,
-      }).resize()
-    );
-    ;
-}catch(e){console.log(e)}})
+      const categoryButtons = Object.keys(groupedCharacters).map((category, index) => {
+        return Markup.button.callback(category, `category-${index}`);
+      });
+
+      await ctx.reply(
+        "Выберите категорию:",
+        Markup.inlineKeyboard([...categoryButtons, Markup.button.callback("Назад", "menu")], {
+          columns: 3,
+        }).resize()
+      );
+      ;
+    } catch (e) { console.log(e) }
+  })
 
 }
 
