@@ -1,7 +1,8 @@
-import { showMenu, showSettings, showCurrentSettings, loadSettings, showAICoverSettings, showAdminMenu } from "./botFunction.js";
+import { showMenu, showSettings, showCurrentSettings, loadSettings, showAICoverSettings } from "./botFunction.js";
 import { characters } from "./variables.js";
 import { Markup } from "telegraf";
 import { groupCharactersByCategory } from "./botActions.js";
+import { registerAdminCommands } from "./admin/botCommands.js";
 
 const groupedCharacters = groupCharactersByCategory(characters);
 
@@ -45,18 +46,12 @@ export function registerBotCommands(bot) {
     }
   });
 
+  registerAdminCommands(bot)
+
   bot.command("aisettings", async (ctx) => {
     
     await showAICoverSettings(ctx);
   });
-
-  bot.command("admin",async (ctx) => {
-    if(ctx.from.id === 225703666){
-      showAdminMenu(ctx)
-    } else {
-      ctx.reply("Недостаточно прав")
-    }
-  })
 
   bot.command("cover", async (ctx) => {
     try{

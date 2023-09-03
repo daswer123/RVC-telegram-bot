@@ -18,6 +18,7 @@ export const INITIAL_SESSION = {
   loadConfig: {},
   isAvalible: true,
   settingPith: false,
+  // isSettingChange: false,
   settingMangioCrepeHop: false,
   settingFeatureRatio: false,
   settingProtectVoiceless: false,
@@ -78,3 +79,39 @@ export const INITIAL_SESSION = {
   gender,
   voice_preset: "male",
 };
+
+
+// TTS VOICE
+export const MALE_VOICES = [
+  { name: "Aidar", id: "aidar" },
+  { name: "Eugene", id: "eugene" },
+  { name: "Levitan", id: "yandex_levitan" },
+  { name: "Zahar", id: "yandex_zahar" },
+  { name: "Silaerkan", id: "yandex_silaerkan" },
+  { name: "Kolya", id: "yandex_kolya" },
+  { name: "Kostya", id: "yandex_kostya" },
+  { name: "Nick", id: "yandex_nick" },
+  { name: "Erkannyavas", id: "yandex_erkannyavas" },
+  { name: "Ermilov", id: "yandex_ermilov" },
+  { name: "Anton Samokhvatov", id: "yandex_anton_samokhvatov" },
+  { name: "VoiceSearch", id: "yandex_voiceSearch" },
+  { name: "Ermil with Tunning", id: "yandex_ermil_with_tunning" },
+  { name: "Robot", id: "yandex_robot" },
+  { name: "Dude", id: "yandex_dude" },
+  { name: "Zombie", id: "yandex_zombie" },
+  { name: "Smoky", id: "yandex_smoky" },
+];
+
+export const FEMALE_VOICES = [
+  { name: "Baya", id: "baya" },
+  { name: "Kseniya", id: "kseniya" },
+  { name: "Xenia", id: "xenia" },
+  { name: "Oksana", id: "yandex_oksana" },
+  { name: "Jane", id: "yandex_jane" },
+  { name: "Nastya", id: "yandex_nastya" },
+  { name: "Sasha", id: "yandex_sasha" },
+  { name: "Zhenya", id: "yandex_zhenya" },
+  { name: "Tanya", id: "yandex_tanya" },
+  { name: "Tatyana Abramova", id: "yandex_tatyana_abramova" },
+  { name: "Alyss", id: "yandex_alyss" },
+];

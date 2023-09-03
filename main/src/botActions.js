@@ -1,53 +1,10 @@
-import { showMenu, showSettings, showCurrentSettings, loadSettings, showAICoverSettings, showCreateMenu, showEffectsSettings } from "./botFunction.js";
-import { INITIAL_SESSION, characters } from "./variables.js";
+import { showMenu, showSettings, showCurrentSettings, loadSettings, showAICoverSettings, showCreateMenu, showEffectsSettings, getRandomMaleVoice, getRandomFemaleVoice } from "./botFunction.js";
+import { MALE_VOICES, FEMALE_VOICES, characters } from "./variables.js";
 import { Markup } from "telegraf";
 import path from "path";
 import fs from 'fs'
-import { deleteFolderContents, getRandomFileContent } from "./functions.js";
-
-const MALE_VOICES = [
-  { name: "Aidar", id: "aidar" },
-  { name: "Eugene", id: "eugene" },
-  { name: "Levitan", id: "yandex_levitan" },
-  { name: "Zahar", id: "yandex_zahar" },
-  { name: "Silaerkan", id: "yandex_silaerkan" },
-  { name: "Kolya", id: "yandex_kolya" },
-  { name: "Kostya", id: "yandex_kostya" },
-  { name: "Nick", id: "yandex_nick" },
-  { name: "Erkannyavas", id: "yandex_erkannyavas" },
-  { name: "Ermilov", id: "yandex_ermilov" },
-  { name: "Anton Samokhvatov", id: "yandex_anton_samokhvatov" },
-  { name: "VoiceSearch", id: "yandex_voiceSearch" },
-  { name: "Ermil with Tunning", id: "yandex_ermil_with_tunning" },
-  { name: "Robot", id: "yandex_robot" },
-  { name: "Dude", id: "yandex_dude" },
-  { name: "Zombie", id: "yandex_zombie" },
-  { name: "Smoky", id: "yandex_smoky" },
-];
-
-const FEMALE_VOICES = [
-  { name: "Baya", id: "baya" },
-  { name: "Kseniya", id: "kseniya" },
-  { name: "Xenia", id: "xenia" },
-  { name: "Oksana", id: "yandex_oksana" },
-  { name: "Jane", id: "yandex_jane" },
-  { name: "Nastya", id: "yandex_nastya" },
-  { name: "Sasha", id: "yandex_sasha" },
-  { name: "Zhenya", id: "yandex_zhenya" },
-  { name: "Tanya", id: "yandex_tanya" },
-  { name: "Tatyana Abramova", id: "yandex_tatyana_abramova" },
-  { name: "Alyss", id: "yandex_alyss" },
-];
-
-function getRandomMaleVoice() {
-  const index = Math.floor(Math.random() * MALE_VOICES.length);
-  return MALE_VOICES[index].id;
-}
-
-function getRandomFemaleVoice() {
-  const index = Math.floor(Math.random() * FEMALE_VOICES.length);
-  return FEMALE_VOICES[index].id;
-}
+import { getRandomFileContent } from "./functions.js";
+import { registerAdminBotActions } from "./admin/botActions.js";
 
 export function groupCharactersByCategory(characters) {
   const categories = {};
@@ -65,18 +22,7 @@ const groupedCharacters = groupCharactersByCategory(characters);
 
 export function registerBotActions(bot) {
 
-  bot.action("set_minPich",async (ctx) => {
-      ctx.reply("Введите, либо значение в Гц или формат [Нота][Октава]\nНапример: C0, C#0\nМожно ввести так: 50\nМинимальное значение 1Гц или С0 или E10")
-
-      ctx.session.waitForMinPich = true
-  })
-
-  bot.action("set_maxPich",async (ctx) => {
-    ctx.reply("Введите, либо значение в Гц или формат [Нота][Октава]\nНапример: E10, C#0\nnМожно ввести так: 1100\nМаксимальное значение 16000Гц или С0 или E10")
-
-    ctx.session.waitForMaxPich = true
-    
-  })
+    registerAdminBotActions(bot)
 
     bot.action("effects_settings", async(ctx) =>{
 
@@ -161,93 +107,7 @@ export function registerBotActions(bot) {
     ]))
   })
 
-  bot.action("admin_ban_user", async(ctx) => {
-    ctx.reply("Введите ID пользователя которого нужно забанить")
-    ctx.session.waitForBan = true
-  })
-  bot.action("admin_unban_user", async(ctx) => {
-    ctx.reply("Введите ID пользователя которого нужно разбанить")
-    ctx.session.waitForUnBan = true
-  })
-
-  bot.action("admin_show_stats", async(ctx) => {
-    // const fs = require('fs');
-    const path = './config/logs.json';
   
-    // Читаем файл
-    const data = fs.readFileSync(path, 'utf-8');
-    const logs = JSON.parse(data);
-  
-    // Получаем текущую дату и время
-    const now = new Date();
-  
-    // Фильтруем массив, чтобы оставить только записи за последние 24 часа
-    const recentLogs = logs.filter(log => {
-      if(!log.date) return false;
-      const logDate = new Date(log.date);
-      // Время в миллисекундах между logDate и now
-      const diff = now - logDate;
-      // Преобразуем разницу в часы
-      const diffInHours = diff / 1000 / 60 / 60;
-      // Возвращаем true, если diffInHours меньше или равно 24
-      return diffInHours <= 24;
-    });
-  
-    // Создаем Map для подсчета каждого уникального пользователя и каждого уникального элемента в поле extra
-    const userCounts = new Map();
-    const modelCounts = new Map();
-  
-    // Проходим по каждому log
-    recentLogs.forEach(log => {
-      // Подсчитываем пользователя
-      if (userCounts.has(log.uniqueId)) {
-        userCounts.set(log.uniqueId, userCounts.get(log.uniqueId) + 1);
-      } else {
-        userCounts.set(log.uniqueId, 1);
-      }
-  
-      // Подсчитываем модель
-      if (log.type === 'transform') {
-        if (modelCounts.has(log.extra)) {
-          modelCounts.set(log.extra, modelCounts.get(log.extra) + 1);
-        } else {
-          modelCounts.set(log.extra, 1);
-        }
-      }
-    });
-  
-    // Преобразуем Map в массив массивов, сортируем его и преобразуем обратно в Map
-    const sortedUserCounts = new Map([...userCounts.entries()].sort((a, b) => b[1] - a[1]));
-    const sortedModelCounts = new Map([...modelCounts.entries()].sort((a, b) => b[1] - a[1]));
-
-    let userCountsMessage = '*Статистика по использованию, среди пользователей за последние 24 часа:*\n\n';
-    sortedUserCounts.forEach((count, userId) => {
-      userCountsMessage += `*${userId}* - ${count} преобразований\n`;
-    });
-    ctx.replyWithMarkdown(userCountsMessage);
-
-    let modelCountsMessage = '*Статистика по использованию моделей в общем за последние 24 часа:*\n\n';
-    sortedModelCounts.forEach((count, modelName) => {
-      modelCountsMessage += `*${modelName.slice(0, -2)}* - ${count} раз\n`;
-    });
-    ctx.replyWithMarkdown(modelCountsMessage);
-  });
-
-  bot.action("admin_clear_folder", async(ctx) => {
-    const sessionsDir = './sessions/';
-    const userIds = fs.readdirSync(sessionsDir).map(Number);
-
-    for (const userId of userIds) {
-        try {
-          deleteFolderContents(sessionsDir+userId);
-        } catch (error) {
-            console.error(`Не удалось получить информацию о пользователе ${userId}:`, error);
-        }
-    }
-
-});
-
-
 
 bot.action("toggle_audio_effects", async(ctx) => {
   ctx.session.improveAudio = ctx.session.improveAudio === true ? false : true
@@ -255,42 +115,19 @@ bot.action("toggle_audio_effects", async(ctx) => {
 })
 
 
-  bot.action("admin_control_power", async(ctx) => {
-    ctx.session.waitForControlPower = true
-    ctx.reply("Введите 3 числа через запятую, эти числа значат нагрузку на:\n1)Преобразование\n2)TTS\n3)Разделение аудио\nПример: 1,1,1")
+
+  bot.action("set_minPich",async (ctx) => {
+    ctx.reply("Введите, либо значение в Гц или формат [Нота][Октава]\nНапример: C0, C#0\nМожно ввести так: 50\nМинимальное значение 1Гц или С0 или E10")
+  
+    ctx.session.waitForMinPich = true
   })
-
-  bot.action("admin_send_msg_all", async(ctx) => {
-    ctx.session.waitForAnonceAll = true
-    ctx.reply("Введите сообщение которое получат все пользователи")
+  
+  bot.action("set_maxPich",async (ctx) => {
+  ctx.reply("Введите, либо значение в Гц или формат [Нота][Октава]\nНапример: E10, C#0\nnМожно ввести так: 1100\nМаксимальное значение 16000Гц или С0 или E10")
+  
+  ctx.session.waitForMaxPich = true
+  
   })
-
-  bot.action("admin_send_msg_сurrent", async(ctx) => {
-    ctx.session.waitForAnonceCurrent = true
-    ctx.reply("Введите сообщение которое получат все пользователи\nВведите в формате 'id,message' ")
-  })
-
-  bot.action("get_all_user_id", async(ctx) => {
-    const sessionsDir = './sessions';
-    const userIds = fs.readdirSync(sessionsDir).map(Number);
-
-    let message = '';
-    for (const userId of userIds) {
-        try {
-            const chat = await ctx.telegram.getChat(userId);
-            const username = chat.username || 'Нет ника';
-            message += "`" + userId + "`"  + ` - ${username}\n`;
-        } catch (error) {
-            console.error(`Не удалось получить информацию о пользователе ${userId}:`, error);
-        }
-    }
-
-    try {
-      await ctx.replyWithMarkdown(message);
-    } catch (error) {
-        console.error('Не удалось отправить сообщение:', error);
-    }
-});
 
 
   bot.action("menu", async (ctx) => {
@@ -653,9 +490,9 @@ try{
     ctx.session.pith = ctx.session.gender.trim() === "male" ? 0 : ctx.session.gender.trim() === "female" ? 12 : 6;
 
     if (ctx.session.gender.trim() === "male") {
-      ctx.session.voiceActor = getRandomMaleVoice();
+      ctx.session.voiceActor = getRandomMaleVoice(MALE_VOICES);
     } else {
-      ctx.session.voiceActor = getRandomFemaleVoice();
+      ctx.session.voiceActor = getRandomFemaleVoice(FEMALE_VOICES);
     }
 
     ctx.session.voice_preset = "male"
@@ -673,9 +510,9 @@ try{
 
 
     if (ctx.session.gender.trim() === "male") {
-      ctx.session.voiceActor = getRandomMaleVoice();
+      ctx.session.voiceActor = getRandomMaleVoice(MALE_VOICES);
     } else {
-      ctx.session.voiceActor = getRandomFemaleVoice();
+      ctx.session.voiceActor = getRandomFemaleVoice(FEMALE_VOICES);
     }
 
     ctx.session.voice_preset = "female"

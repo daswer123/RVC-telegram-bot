@@ -33,6 +33,30 @@ export class Semaphore {
 }
 
 
+export function getRandomMaleVoice(voices) {
+  const index = Math.floor(Math.random() * MALE_VOICES.length);
+  return MALE_VOICES[index].id;
+}
+
+export function getRandomFemaleVoice(voices) {
+  const index = Math.floor(Math.random() * FEMALE_VOICES.length);
+  return FEMALE_VOICES[index].id;
+}
+
+
+export function createSessionFolder(ctx){
+  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+    const username = ctx.from.username; // получаем ник пользователя
+    const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+    const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+    // Создаем папку для пользователя, если она еще не существует
+    if (!fs.existsSync(sessionPath)) {
+      fs.mkdirSync(sessionPath, { recursive: true });
+    }
+}
+
+
 export async function checkForBan(ctx){
   const uniqueId = String(ctx.from.id); // получаем уникальный идентификатор пользователя и преобразуем его в строку
 
@@ -254,41 +278,6 @@ export async function processVideo(ctx, sessionPath) {
   }
 }
 
-
-// Отправить сообщение всем юзерам
-export async function sendMessageToAllUsers(message, bot) {
-  const sessionsDir = './sessions';
-  const userIds = fs.readdirSync(sessionsDir).map(Number);
-
-  for (const userId of userIds) {
-    try {
-      await bot.telegram.sendMessage(userId, message);
-    } catch (error) {
-      // Если пользователь заблокировал бота, пропустить и продолжить со следующим пользователем
-      if (error.code === 403) {
-        console.log(`Пользователь ${userId} заблокировал бота. Пропускаем.`);
-        continue;
-      }
-      // Вывести ошибку для всех других случаев
-      console.error(`Не удалось отправить сообщение пользователю ${userId}:`, error);
-    }
-  }
-}
-
-// Отправить сообщение определённому пользователю
-export async function sendMessageToUser(userId, message, bot) {
-  try {
-    await bot.telegram.sendMessage(userId, message);
-  } catch (error) {
-    // Если пользователь заблокировал бота, выводим сообщение об ошибке
-    if (error.code === 403) {
-      console.log(`Пользователь ${userId} заблокировал бота.`);
-    } else {
-      // Выводим ошибку для всех других случаев
-      console.error(`Не удалось отправить сообщение пользователю ${userId}:`, error);
-    }
-  }
-}
 
 
 export async function process_audio_file(ctx, sessionPath, filename = "audio.wav") {
@@ -732,21 +721,6 @@ export async function showCreateMenu(ctx){
     [Markup.button.callback(`Получить текст для озвучивания`, "create_voice_random_text")],
     [Markup.button.callback(`Информация о создание и сроках`, "create_voice_info")],
     [Markup.button.callback("Завершить процедуру для создание модели","create_voice_end")],
-    [Markup.button.callback(`Назад`, "menu")],
-  ]).resize();
-
-  await ctx.replyWithMarkdown(message, keyboard);
-  return message
-}
-
-export async function showAdminMenu(ctx){
-  const message = `Добро пожаловать в админ меню\nСдесь вы можете:\nЗабанить пользователя\nПосмотреть статистику использования голосов\nОтрегулировать мощность\nПрислать сообщение определенному пользователю\nПрислать сообщение всем пользователям.`
-
-  const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback(`Забанить пользователя`, "admin_ban_user"),Markup.button.callback(`Разбанить пользователя`, "admin_unban_user")],
-    [Markup.button.callback(`Посмотреть статистику использования голосов`, "admin_show_stats"),Markup.button.callback(`Очистить папку sessions`, "admin_clear_folder")],
-    [Markup.button.callback(`Отрегулировать мощность`, "admin_control_power"),Markup.button.callback(`Показать ID Всех пользователей`, "get_all_user_id")],
-    [Markup.button.callback(`Отправить сообщение пользователю`, "admin_send_msg_сurrent"),Markup.button.callback(`Отправить сообщение всем`, "admin_send_msg_all")],
     [Markup.button.callback(`Назад`, "menu")],
   ]).resize();
 
