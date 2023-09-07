@@ -1,6 +1,7 @@
-import { banUser, unbanUser } from "./botFunctions.js";
+import { banUser, getUserByUsernameFromDatabase, getUserFromDatabase, unbanUser, updateUserStatusInDatabase } from "../server/db.js";
+import { sendMessageToAllUsers } from "./botFunctions.js";
 
-export async function adminHandler(ctx) {
+export async function adminHandler(ctx, bot) {
 
     if (ctx.session.waitForBan) {
         const uniqueId = ctx.message.text; // получаем уникальный идентификатор пользователя
@@ -17,6 +18,32 @@ export async function adminHandler(ctx) {
         ctx.session.waitForUnBan = false
         return
     }
+
+    // Дать админ права
+    if (ctx.session.waitForAdminGive) {
+        const uniqueIdOrUsername = ctx.message.text; // Получаем уникальный идентификатор пользователя или его имя
+
+        // Попытка найти пользователя по ID
+        let user = await getUserFromDatabase(uniqueIdOrUsername);
+
+        // Если пользователь не найден по ID, попробуем найти по имени пользователя
+        if (!user) {
+            user = await getUserByUsernameFromDatabase(uniqueIdOrUsername);
+        }
+
+        // Если пользователь найден, обновляем его статус на 'admin'
+        if (user) {
+            await updateUserStatusInDatabase(user.userId, 'admin');
+            ctx.reply("Пользователь успешно стал администратором");
+        } else {
+            ctx.reply("Пользователь не найден");
+        }
+
+        ctx.session.waitForAdminGive = false;
+        return;
+    }
+
+
 
     if (ctx.session.waitForControlPower) {
         ctx.session.waitForControlPower = false

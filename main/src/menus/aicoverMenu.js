@@ -18,9 +18,6 @@ export async function showAICoverSettings(ctx) {
     [Markup.button.callback(`Громкость вокала: ${session.voice_volume}`, "set_vocal_volume")],
     [Markup.button.callback(`Громкость инструментала: ${session.instrumnet_volume}`, "set_instrumental_volume")],
     [Markup.button.callback("Модификаторы при разделении аудио", "set_audio_process_power")],
-    [Markup.button.callback("Включить реверберацию", "toggle_audio_reverb"), Markup.button.callback("Включить эхо", "toggle_audio_echo")],
-    [Markup.button.callback("Включить автотюн", "toggle_audio_autotune"), Markup.button.callback("Включить эффект телефона", "toggle_audio_phoneEffect")],
-    [Markup.button.callback("Настройка эффектов", "effects_settings")],
     [Markup.button.callback("Меню", "menu")],
   ]).resize();
 

@@ -6,6 +6,7 @@ import { showSettings } from "./menus/settingsMenu.js";
 import { loadSettings } from "./presets/botFunctions.js";
 import { showAICoverSettings } from "./menus/aicoverMenu.js";
 import { groupCharactersByCategory } from "./characters/botFunctions.js";
+import { getAllOperationsFromDatabase, getUserOperationsFromDatabase } from "./server/db.js";
 
 const groupedCharacters = groupCharactersByCategory(characters);
 
@@ -68,6 +69,41 @@ export function registerBotCommands(bot) {
       );
     } catch (e) { console.log(e) }
   })
+
+  bot.command("pos", async (ctx) => {
+    try {
+      const allOperations = getAllOperationsFromDatabase();
+      const userOperations = getUserOperationsFromDatabase(ctx.from.id);
+
+      // Отображение для перевода типов операций
+      const operationNames = {
+        'handleAICover': 'Создание AI кавера',
+        'transformAudio': 'Преобразование голоса',
+        'separateAudio': 'Разделение аудио'
+      };
+
+      if (userOperations.length === 0) {
+        await ctx.reply('У вас нет операций в очереди.');
+        return;
+      }
+
+      let response = 'Ваши операции:\n';
+
+      userOperations.forEach((userOperation, index) => {
+        // Найти позицию операции в общем списке операций
+        const queuePosition = allOperations.findIndex(operation => operation.operationId === userOperation.operationId) + 1;
+        // Использовать отображение для перевода типов операций
+        const operationName = operationNames[userOperation.operationType] || userOperation.operationType;
+        response += `Номер в очереди: ${queuePosition} - ${operationName}\n`;
+      });
+
+      await ctx.reply(response);
+    } catch (e) {
+      console.log(e);
+      await ctx.reply('Произошла ошибка при получении ваших операций.');
+    }
+  });
+
 
   bot.command("menu", async (ctx) => {
     try {

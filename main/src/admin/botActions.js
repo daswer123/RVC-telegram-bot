@@ -1,23 +1,23 @@
-import { countUsersAndModels, createLogMessages, getLogs, getRecentLogs, getUserIds, getUserInfo, readJsonFile, removeFromJsonFile, sendMessageToUser } from "./botFunctions.js";
+import { countUsersAndModels, createLogMessages, getLogs, getRecentLogs, getUserIds, getUserInfo, sendMessageToUser } from "./botFunctions.js";
 import { Markup } from "telegraf";
-import fs from 'fs'
-import path from "path";
+import { getTrainModelsFromDatabase, removeTrainModelFromDatabase } from "../server/db.js";
+import { showAdminMenu } from "../menus/adminMenu.js";
 
 export function registerAdminBotActions(bot) {
     bot.action("admin_ban_user", async (ctx) => {
-        ctx.reply("Введите ID пользователя которого нужно забанить")
+        ctx.reply("Введите ID или ник пользователя которого нужно забанить")
         ctx.session.waitForBan = true
     })
     bot.action("admin_unban_user", async (ctx) => {
-        ctx.reply("Введите ID пользователя которого нужно разбанить")
+        ctx.reply("Введите ID или ник пользователя которого нужно разбанить")
         ctx.session.waitForUnBan = true
     })
 
     bot.action("admin_show_stats", async (ctx) => {
         const logs = getLogs();
         const recentLogs = getRecentLogs(logs);
-        const [userCounts, modelCounts] = countUsersAndModels(recentLogs);
-        const [userCountsMessage, modelCountsMessage] = createLogMessages(userCounts, modelCounts);
+        const [userCounts, modelCounts, someCount] = countUsersAndModels(recentLogs);
+        const [userCountsMessage, modelCountsMessage,] = createLogMessages(userCounts, someCount);
 
         // Проверка на длину сообщения и разбиение на несколько сообщений, если это необходимо
         if (userCountsMessage.length > 4096) {
@@ -39,7 +39,7 @@ export function registerAdminBotActions(bot) {
         const userIds = getUserIds();
         userIds.forEach(clearFolder);
     });
-    
+
     bot.action("get_all_user_id", async (ctx) => {
         const userIds = getUserIds();
         let message = '';
@@ -54,60 +54,61 @@ export function registerAdminBotActions(bot) {
     });
 
     bot.action("admin_create_model_notification", async (ctx) => {
-        try{
-        const jsonFilePath = path.join('waitForModel.json');
-        const fileContent = fs.readFileSync(jsonFilePath);
-        const entries = JSON.parse(fileContent);
-      
-        // Отсортировать модели по дате
-        entries.sort((a, b) => new Date(a.date) - new Date(b.date));
-      
-        for (const entry of entries) {
-          const message = `${entry.username || entry.id} - ${entry.modelName} - ${entry.date}`;
-      
-          const approveButton = Markup.button.callback('Сообщить о готовности', `approve_${entry.id}_${entry.date}`);
-          const rejectButton = Markup.button.callback('Отклонить', `reject_${entry.id}_${entry.date}`);
-      
-          await ctx.reply(message, Markup.inlineKeyboard([approveButton, rejectButton]));
-        }
-    }catch(err){
-        ctx.reply("Файла ожидания не существует")
-        console.log(err)
-    }
-      });
-      
-      bot.action(/approve_(.+)_((?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z))/, async (ctx) => {
-        const userId = Number(ctx.match[1]); // преобразование в число
-        const date = ctx.match[2];
-        const entries = await readJsonFile();
-        const userEntry = entries.find(entry => entry.id === userId && entry.date === date);
-    
-        if (userEntry) {
-          const message = `Ваша модель "${userEntry.modelName}" готова!`;
-          await sendMessageToUser(userId, message, bot);
-          removeFromJsonFile(userId, date);
-          ctx.reply(`Оповещение отправленно, пользователю ${userId} отправленно`)
-        } else{
-          ctx.reply("Ошибка")
+        try {
+            const entries = await getTrainModelsFromDatabase();
+
+            if (entries.length < 1) {
+                ctx.reply("Моделей на создание нет")
+                showAdminMenu(ctx)
+            }
+
+            for (const entry of entries) {
+                const message = `${entry.username || entry.id} - ${entry.modelName} - ${entry.description} - ${entry.date}`;
+
+                const approveButton = Markup.button.callback('Сообщить о готовности', `approve_${entry.id}_${entry.date}`);
+                const rejectButton = Markup.button.callback('Отклонить', `reject_${entry.id}_${entry.date}`);
+
+                await ctx.reply(message, Markup.inlineKeyboard([approveButton, rejectButton]));
+            }
+        } catch (err) {
+            ctx.reply("Ошибка при получении моделей из базы данных")
+            console.log(err)
         }
     });
-    
-    bot.action(/reject_(.+)_((?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z))/, async (ctx) => {
-        const userId = Number(ctx.match[1]);
+
+    bot.action(/approve_(.+)_((?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z))/, async (ctx) => {
+        const userId = ctx.match[1]; // преобразование в число
         const date = ctx.match[2];
-        const entries = await readJsonFile();
+        const entries = await getTrainModelsFromDatabase();
+
         const userEntry = entries.find(entry => entry.id === userId && entry.date === date);
-    
+        console.log(entries, userEntry)
         if (userEntry) {
-          const message = `Ваша модель "${userEntry.modelName}" была отклонена. Возможно ваши образцы были плохого качества или слишком короткими.`;
-          await sendMessageToUser(userId, message, bot);
-          removeFromJsonFile(userId, date);
-          ctx.reply(`Оповещение отправленно, пользователю ${userId} отправленно`)
+            const message = `Ваша модель "${userEntry.modelName}" готова!`;
+            await sendMessageToUser(userId, message, bot);
+            await removeTrainModelFromDatabase(userId, date);
+            ctx.reply(`Оповещение пользователю ${userId} отправлено`)
         } else {
             ctx.reply("Ошибка")
         }
     });
-    
+
+    bot.action(/reject_(.+)_((?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z))/, async (ctx) => {
+        const userId = ctx.match[1];
+        const date = ctx.match[2];
+        const entries = await getTrainModelsFromDatabase();
+        const userEntry = entries.find(entry => entry.id === userId && entry.date === date);
+
+        if (userEntry) {
+            const message = `Ваша модель "${userEntry.modelName}" была отклонена. Возможно ваши образцы были плохого качества или слишком короткими.`;
+            await sendMessageToUser(userId, message, bot);
+            await removeTrainModelFromDatabase(userId, date);
+            ctx.reply(`Оповещение пользователю ${userId} отправлено`)
+        } else {
+            ctx.reply("Ошибка")
+        }
+    });
+
 
 
     bot.action("admin_control_power", async (ctx) => {
@@ -124,6 +125,12 @@ export function registerAdminBotActions(bot) {
         ctx.session.waitForAnonceCurrent = true
         ctx.reply("Введите сообщение которое получат все пользователи\nВведите в формате 'id,message' ")
     })
+
+    bot.action("admin_give_admin", async (ctx) => {
+        ctx.session.waitForAdminGive = true
+        ctx.reply("Введите ник пользователя или ID что бы дать Админ доступ")
+    })
+
 
 }
 

@@ -22,45 +22,75 @@ import { createModelHanlder } from "./createModel/handler.js";
 import { showMenu } from "./menus/mainMenu.js";
 import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
+import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-export const bot = new Telegraf(config.get("TELEGRAM_TOKEN"), { handlerTimeout: 600_000 });
+export const bot = new Telegraf(config.get("TELEGRAM_TOKEN"), { handlerTimeout: 900_000 });
 bot.use(session());
 
 setBotCommands(bot);
 
 process.setMaxListeners(0);
 
-bot.use((ctx, next) => {
-  if (ctx.session) {
-    //
+clearOperationsDatabase()
+
+
+bot.use(async (ctx, next) => {
+  // Попытка получить сессию из базы данных
+  const session = await getSessionFromDatabase(ctx.from.id);
+
+  if (session) {
+    ctx.session = session;
   } else {
     ctx.session = { ...INITIAL_SESSION };
   }
 
+  // Проверка наличия пользователя в базе данных
+  if (!ctx.session.inDatabase) {
+    const user = await getUserFromDatabase(ctx.from.id);
+    if (!user) {
+      // Если пользователя нет в базе данных, добавляем его и присваиваем статус 'default'
+      await saveUserToDatabase(ctx.from.id, ctx.from.username, "default");
+    }
+    // Помечаем, что пользователь теперь в базе данных
+    ctx.session.inDatabase = true;
+  }
+
   try {
     if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
-
       ctx.session = { ...ctx.session.loadConfig };
 
       // очистка объекта loadConfig после присвоения сессии
       ctx.session.loadConfig = {};
     }
   } catch (err) {
-    console.log("err")
+    console.log(err, "err")
   }
 
-  next()
+  await next(); // Обработка сообщения ботом
+
+  // Сохранение сессии в базу данных после ответа бота
+  await saveSessionToDatabase(ctx.from.id, ctx.session);
 });
+
 
 registerBotActions(bot)
 registerBotCommands(bot)
 
 bot.command("start", async (ctx) => {
   try {
-    ctx.session = INITIAL_SESSION;
+    const session = await getSessionFromDatabase(ctx.from.id);
+
+    if (session) {
+      ctx.session = session;
+    } else {
+      ctx.session = { ...INITIAL_SESSION };
+      // Если пользователь не найден в базе данных, добавляем его
+      await saveUserToDatabase(ctx.from.id, ctx.from.username);
+
+    }
 
     await ctx.reply("Привет! Я бот для изменения голоса. Для начала работы выберите персонажа /characters .\n\nДля просмотра списка команд введите /help")
     await showMenu(ctx);
@@ -95,23 +125,27 @@ bot.on("video", async (ctx) => {
 
 bot.on(message("text"), async (ctx) => {
   // if (protectBot(ctx)) return
+
   if (await checkForBan(ctx)) return
   try {
     // Каждый хендлер должен иметь  Promise.resolve(false) для правильной работы
     const handlersArray = [
-      adminHandler(ctx),
+      adminHandler(ctx, bot),
       effectHanlder(ctx),
       createModelHanlder(ctx),
       separateHanlder(ctx),
       handleSettings(ctx),
       ctx.session.waitForPredlog ? handlePredlog(ctx) : Promise.resolve(false),
       ctx.session.waitForPresetSave ? handlePresetSave(ctx) : Promise.resolve(false),
-      is_youtube_url(ctx.message.text) ? handleYoutubeCover(ctx) : Promise.resolve(false),
     ];
 
     const results = await Promise.all(handlersArray);
 
     if (results.every(result => result === false)) {
+      if (is_youtube_url(ctx.message.text)) {
+        handleYoutubeCover(ctx)
+        return
+      }
       createSessionFolder(ctx);
       textHandler(ctx);
     }

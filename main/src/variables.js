@@ -78,6 +78,7 @@ export const INITIAL_SESSION = {
   name,
   gender,
   voice_preset: "male",
+  inDatabase: false
 };
 
 // DEFAULT Settings value 
@@ -186,3 +187,7 @@ export const FEMALE_VOICES = [
   { name: "Tatyana Abramova", id: "yandex_tatyana_abramova" },
   { name: "Alyss", id: "yandex_alyss" },
 ];
+
+export const transfromAudioMaxQueue = 3
+export const handleAICoverMaxQueue = 2
+export const separateAudioMaxQueue = 1

@@ -4,9 +4,10 @@ import fs from "fs";
 import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
-import { createVoice, logUserSession, slowDownAudioYa } from "./functions.js";
-import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url } from "./botFunction.js";
+import { createVoice, downloadFromYoutube, logUserSession, slowDownAudioYa } from "./functions.js";
+import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url, separateAudioBot, checkForLimits } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";
+import { handleAICoverMaxQueue, transfromAudioMaxQueue } from "./variables.js";
 
 // import { registerAdminBotActions } from "./admin/botActions.js";
 // import { registerCreateMenuBotActions } from "./createModel/botActions.js";
@@ -29,6 +30,9 @@ export const handlePredlog = (ctx) => {
 }
 
 export const handleYoutubeCover = (ctx) => {
+
+  if (checkForLimits(ctx, "handleAICover", handleAICoverMaxQueue)) return
+
   const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
   const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
   const username = ctx.from.username; // получаем ник пользователя
@@ -44,13 +48,9 @@ export const handleYoutubeCover = (ctx) => {
   return true;
 }
 
-
-
-
 async function createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath) {
   const response = await createVoice(ctx.session.voiceActor, ctx.message.text, messageId);
-  await logUserSession(ctx, "tts", ctx.session.voiceActor)
-
+  // await logUserSession(ctx, "tts", ctx.session.voiceActor)
   // Поиск файла с нужным названием
   const sieroPath = path.join(config.get('SIERO_AUDIO_PATH'), String(messageId));
   const files = fs.readdirSync(sieroPath);
@@ -65,10 +65,32 @@ async function createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath) {
     slowedFilePath = paths.slowedFilePath;
   }
 
+  logUserSession(ctx, "silero_tts", ctx.session.voiceActor)
   return { newFilePath, slowedFilePath };
 }
 
+// Функция technicalHandler генерирует голос и обрабатывает аудиофайл
+export async function technicalHandler(ctx, { uniqueId, messageId, username, sessionPath }) {
+  if (!ctx.session.voiceActor.startsWith("yandex_")) {
+    const { newFilePath, slowedFilePath } = await createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath);
+  } else {
+    const speaker = ctx.session.voiceActor.split("_")[1];
+    await generateSpeechYA(sessionPath, "generated_speach.mp3", ctx.message.text, speaker);
+    await slowDownAudioYa(`${sessionPath}/generated_speach.mp3`, ctx.session.voice_speed);
+    logUserSession(ctx, "yandex_tts", ctx.session.voiceActor)
+  }
+
+  ctx.reply("Текст озвучен роботом, преобразование голоса поставленно в очередь, ожидайте")
+
+  await processAudioMessage(ctx, false, `${sessionPath}/generated_voice_slowed.wav`, sessionPath, "", "tts");
+
+  return true
+}
+
 export async function textHandler(ctx) {
+
+  if (checkForLimits(ctx, "transformAudio", transfromAudioMaxQueue)) return
+
   try {
     const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
     const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
@@ -76,34 +98,15 @@ export async function textHandler(ctx) {
     const sessionPath = `sessions/${uniqueId}/${messageId}`;
 
     if (!ctx.session.voiceActor.startsWith("yandex_")) {
-      const { newFilePath, slowedFilePath } = await createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath);
-      writeUsernameFile(sessionPath, username, uniqueId, messageId);
-    } else {
-      const speaker = ctx.session.voiceActor.split("_")[1];
-      await generateSpeechYA(sessionPath, "generated_speach.mp3", ctx.message.text, speaker);
-      await slowDownAudioYa(`${sessionPath}/generated_speach.mp3`, ctx.session.voice_speed);
+      const { newFilePath, slowedFilePath } = await technicalHandler(ctx, { uniqueId, messageId, username, sessionPath })
+
+      if (ctx.session.mergeAudio || ctx.session.waitingForCover) {
+        ctx.session.mergeAudio = false;
+        ctx.session.waitingForCover = false;
+        await ctx.reply("Отмена операции");
+        return
+      }
     }
-
-    const slowedFilePath = `${sessionPath}/generated_voice_slowed.wav`
-
-    await ctx.reply("Текст озвучен, преобразование голоса");
-
-    // добавляем голосовое сообщение в очередь
-    ctx.state.voiceMessagesQueue = ctx.state.voiceMessagesQueue || [];
-    ctx.state.voiceMessagesQueue.push(ctx);
-
-    // если обработчик сообщений уже работает, не запускаем еще один
-    if (!ctx.state.processingVoiceMessages) {
-      processVoiceMessagesQueue(ctx, slowedFilePath, sessionPath);
-    }
-
-    if (ctx.session.mergeAudio || ctx.session.waitingForCover) {
-      ctx.session.mergeAudio = false;
-      ctx.session.waitingForCover = false;
-      await ctx.reply("Отмена операции");
-      return
-    }
-
   } catch (err) {
     await ctx.reply("Что-то пошло не так. Попробуйте снова")
     console.log(err)
@@ -207,3 +210,4 @@ function writeUsernameFile(sessionPath, username, uniqueId, messageId) {
     console.log(err)
   }
 }
+
