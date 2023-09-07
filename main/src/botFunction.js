@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, separateAudioVR, compressMp3, logUserSession, getBannedUsers, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects} from "./functions.js";
+import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, separateAudioVR, compressMp3, logUserSession, getBannedUsers, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects } from "./functions.js";
 import { INITIAL_SESSION } from "./variables.js";
 import config from "config";
 import fs from "fs";
@@ -44,25 +44,27 @@ export function getRandomFemaleVoice(voices) {
 }
 
 
-export function createSessionFolder(ctx){
+export function createSessionFolder(ctx) {
   const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-    const username = ctx.from.username; // получаем ник пользователя
-    const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
-    const sessionPath = `sessions/${uniqueId}/${messageId}`;
+  const username = ctx.from.username; // получаем ник пользователя
+  const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+  const sessionPath = `sessions/${uniqueId}/${messageId}`;
 
-    // Создаем папку для пользователя, если она еще не существует
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
-    }
+  // Создаем папку для пользователя, если она еще не существует
+  if (!fs.existsSync(sessionPath)) {
+    fs.mkdirSync(sessionPath, { recursive: true });
+  }
+
+  return sessionPath
 }
 
 
-export async function checkForBan(ctx){
+export async function checkForBan(ctx) {
   const uniqueId = String(ctx.from.id); // получаем уникальный идентификатор пользователя и преобразуем его в строку
 
   const bannedUsers = await getBannedUsers();
 
-  console.log(uniqueId, bannedUsers,bannedUsers.includes(uniqueId))
+  console.log(uniqueId, bannedUsers, bannedUsers.includes(uniqueId))
 
   // Проверяем, забанен ли пользователь
   if (bannedUsers.includes(uniqueId)) {
@@ -73,12 +75,12 @@ export async function checkForBan(ctx){
   return false;
 }
 
-export function protectBot(ctx){
+export function protectBot(ctx) {
   const isStarted = ctx?.session?.isAvalible
-  if (!isStarted){
+  if (!isStarted) {
     ctx.reply("Введите /start для начала работы")
     return true
-  } 
+  }
   return false
 }
 
@@ -145,52 +147,52 @@ export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
     if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both") {
       await ctx.telegram.editMessageText(processMessage.chat.id, processMessage.message_id, null, "Убираем бек вокал");
 
-      if(ctx.session.audioProcessPower === "backvocal"){
+      if (ctx.session.audioProcessPower === "backvocal") {
         await separateAudioVR(sessionPath, "vocal.mp3", "URV_Models/hp_5_back.pth", "/out_back",)
       } else {
-      await separateAudioVR(sessionPath, "vocal_de_echo.mp3", "URV_Models/hp_5_back.pth", "/out_back")
+        await separateAudioVR(sessionPath, "vocal_de_echo.mp3", "URV_Models/hp_5_back.pth", "/out_back")
       }
       vocalString += " ,без бек вокала"
     }
 
-    if(ctx.session.audioProcessPower === "echo"){
+    if (ctx.session.audioProcessPower === "echo") {
       vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_echo.mp3");
-     }
+    }
 
-    if(ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both"){
-     vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_back.mp3");
+    if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both") {
+      vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_back.mp3");
     }
 
     await ctx.reply(vocalString)
     await ctx.sendAudio({ source: vocalPath });
 
-    if(ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "echo" || ctx.session.audioProcessPower === "both"){
+    if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "echo" || ctx.session.audioProcessPower === "both") {
       await ctx.sendAudio({ source: vocalPathDeEcho });
-    
+
       // Исходный и целевой пути
       const sourcePath = `${sessionPath}/out_back/instrument_vocal_de_echo.mp3_10.wav`;
       const destinationPath = `${sessionPath}/backvocal.mp3`;
       const readyDestPath = `${sessionPath}/backvocall.mp3`
-    
+
       // Переименование файла
-      fs.rename(sourcePath, destinationPath, async function(err) {
+      fs.rename(sourcePath, destinationPath, async function (err) {
         if (err) {
           console.log('ERROR: ' + err);
         }
         else {
           // Отправка файла после переименования
           await ctx.reply("Отдельно бек вокал")
-          await compressMp3(destinationPath,`${sessionPath}/backvocall.mp3`)
+          await compressMp3(destinationPath, `${sessionPath}/backvocall.mp3`)
           await ctx.sendAudio({ source: readyDestPath });
         }
       });
     }
-      
+
     await ctx.reply("Инструментал")
     await ctx.sendAudio({ source: instrumentalPath });
 
     ctx.session.audioProcessPower = prevState
-    logUserSession(ctx,"only_separate","none")
+    logUserSession(ctx, "only_separate", "none")
   } catch (err) {
     ctx.reply("Произошла ошибка, попробуйте снова. Возможно файл который вы загрузили слишком большой. Должен быть не более 19мб.")
   }
@@ -312,23 +314,23 @@ export async function process_audio_file(ctx, sessionPath, filename = "audio.wav
     if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both") {
       await ctx.telegram.editMessageText(processMessage.chat.id, processMessage.message_id, null, "[3/3]Убираем бек вокал");
 
-      if(ctx.session.audioProcessPower === "backvocal"){
+      if (ctx.session.audioProcessPower === "backvocal") {
         await separateAudioVR(sessionPath, "vocal.mp3", "URV_Models/hp_5_back.pth", "/out_back",)
       } else {
-      await separateAudioVR(sessionPath, "vocal_de_echo.mp3", "URV_Models/hp_5_back.pth", "/out_back")
+        await separateAudioVR(sessionPath, "vocal_de_echo.mp3", "URV_Models/hp_5_back.pth", "/out_back")
       }
       vocalString += " ,без бек вокала"
     }
 
-    if(ctx.session.audioProcessPower === "echo"){
+    if (ctx.session.audioProcessPower === "echo") {
       vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_echo.mp3");
-     }
-
-    if(ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both"){
-     vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_back.mp3");
     }
 
-    if(!vocalPathDeEcho) vocalPathDeEcho = vocalPath
+    if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both") {
+      vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_back.mp3");
+    }
+
+    if (!vocalPathDeEcho) vocalPathDeEcho = vocalPath
 
     await ctx.reply("[2/4] Подготовка инструментала и вокала к работе");
     await ctx.sendAudio({ source: vocalPathDeEcho });
@@ -338,16 +340,16 @@ export async function process_audio_file(ctx, sessionPath, filename = "audio.wav
     await transformAudio(ctx, sessionPath, vocalPathDeEcho, true);
     await ctx.sendAudio({ source: sessionOutputPath });
 
-    if(ctx.session.autoTune){
+    if (ctx.session.autoTune) {
       await ctx.reply(`[3.5/4] Применяем автотюн на полученный голос`)
-      await autotuneAudio(ctx,sessionPath,"audio_out.mp3")
+      await autotuneAudio(ctx, sessionPath, "audio_out.mp3")
       sessionOutputPath = path.join(fullSessionPath, "autotune_vocal.mp3");
     }
 
     if (ctx.session.reverbOn || ctx.session.echoOn) {
-      await ctx.reply(`[3.5/4] Применяем эффекты на полученный голос`);    
+      await ctx.reply(`[3.5/4] Применяем эффекты на полученный голос`);
       sessionOutputPath = path.join(fullSessionPath, "autotune_vocal.mp3");
-    
+
       // Проверьте, существует ли файл
       if (!fs.existsSync(sessionOutputPath)) {
         // Если файла не существует, то примените audio_out.mp3
@@ -358,7 +360,7 @@ export async function process_audio_file(ctx, sessionPath, filename = "audio.wav
         sessionOutputPath = path.join(sessionPath, "audio_out_improve.mp3");
       }
     }
-    
+
     await ctx.reply("[4/4] Склеивание вокала и фоновой музыки");
     await mergeAudioFilesToMp3(sessionOutputPath, instrumentalPath, resultPath, ctx);
 
@@ -419,7 +421,7 @@ export const processAiCover = async (ctx) => {
   const sessionPath = `sessions/${uniqueId}/${messageId}`;
   const filename = ctx.message.audio.file_name;
 
-  logUserSession(ctx,"cover",ctx.session.name)
+  logUserSession(ctx, "cover", ctx.session.name)
 
   // создаем папку сессии, если она еще не существует
   if (!fs.existsSync(sessionPath)) {
@@ -435,234 +437,83 @@ export const processAiCover = async (ctx) => {
     console.log(err)
   }
 
-  try{
-  const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
-  await downloadFile(link, `${sessionPath}/audio.wav`);
-  ctx.reply("Обработка аудио...")
+  try {
+    const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
+    await downloadFile(link, `${sessionPath}/audio.wav`);
+    ctx.reply("Обработка аудио...")
 
-  await process_audio_file(ctx, sessionPath, filename);
+    await process_audio_file(ctx, sessionPath, filename);
 
-  ctx.session.waitingForCover = false;
-  }catch(err){
+    ctx.session.waitingForCover = false;
+  } catch (err) {
     ctx.reply("Произошла ошибка, возможно файл слишком большой")
   }
 };
 
-export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", sessionPathIn = "") => {
-  try{
-  ;
-  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-  const username = ctx.from.username; // получаем ник пользователя
-  const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
-  let sessionPath = `sessions/${uniqueId}/${messageId}`;
-
-  if (sessionPathIn) {
-    sessionPath = sessionPathIn;
-  }
-
-  // создаем папку сессии, если она еще не существует
-  if (!fs.existsSync(sessionPath)) {
-    fs.mkdirSync(sessionPath, { recursive: true });
-  }
-
-  try {
-    // создаем текстовый файл с именем пользователя
-    const filename = `${username}.txt`;
-    const filepath = path.join(sessionPath, filename);
-    fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
-  } catch (err) {
-    console.log(err)
-  }
+async function handleAudio(ctx, sessionPath, audioPath = '', isAudio = false, messageId = null) {
+  let filePath, audioSource;
 
   if (!audioPath) {
     let link;
-    if (ctx.message.voice) {
-      link = await ctx.telegram.getFileLink(ctx.message.voice.file_id);
-    } else if (ctx.message.audio) {
-      link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
+    if (ctx.message.voice || ctx.message.audio) {
+      link = await ctx.telegram.getFileLink((ctx.message.voice || ctx.message.audio).file_id);
     } else {
       ctx.reply("Не удалось обработать сообщение. Пожалуйста, отправьте голосовое или аудио сообщение.");
       return;
     }
 
     await downloadFile(link, `${sessionPath}/audio.ogg`);
-    ctx.reply("Обработка аудио...")
-  } else {
-    const filePath = await transformAudio(ctx, sessionPath, audioPath, true);
-
-    await ctx.sendChatAction("upload_audio");
-
-    await ctx.sendChatAction("upload_audio");
-
-    
-
-    if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
-
-      if(ctx.session.phoneEffect){
-        await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
-      } else {
-        await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
-      }    
-      
-      await ctx.sendAudio({
-        source: `${sessionPath}/audio_out_improve.mp3`,
-        reply_to_message_id: messageId // отвечаем на исходное сообщение
-      });
-
-    } else{
-      await ctx.sendAudio({
-        source: `${sessionPath}/audio_out_cut.mp3`,
-        reply_to_message_id: messageId // отвечаем на исходное сообщение
-      });
-    }
-    
-
-    return
+    ctx.reply("Обработка аудио...");
   }
 
+  filePath = await transformAudio(ctx, sessionPath, audioPath, true);
 
-  if (isAudio) {
-    const filePath = await transformAudio(ctx, sessionPath, "", true);
+  await ctx.sendChatAction("upload_audio");
 
-    await ctx.sendChatAction("upload_audio");
+  if (ctx.session.phoneEffect) {
+    await phoneCallEffects(ctx, sessionPath, "audio_out_cut.mp3");
+  }
 
-    if(ctx.session.phoneEffect){
-      await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
+  if (ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect) {
+    if (!ctx.session.phoneEffect) {
+      await improveAudio(ctx, sessionPath, "audio_out_cut.mp3");
     }
 
-    if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
+    audioSource = `${sessionPath}/audio_out_improve.mp3`;
+  } else {
+    audioSource = `${sessionPath}/audio_out_cut.mp3`;
+  }
 
-      if(ctx.session.phoneEffect){
-        await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
-      } else {
-        await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
-      }
-      
-      await ctx.sendAudio({
-        source: `${sessionPath}/audio_out_improve.mp3`,
-        reply_to_message_id: messageId // отвечаем на исходное сообщение
-      });
-
-    } else{
+  if (ctx.session.voiceOrAudioOut === "audio") {
     await ctx.sendAudio({
-      source: `${sessionPath}/audio_out_cut.mp3`,
-      reply_to_message_id: messageId // отвечаем на исходное сообщение
+      source: audioSource,
+      reply_to_message_id: messageId
+    });
+  } else {
+    await convertToOgg(audioSource);
+    await ctx.sendVoice({
+      source: `${audioSource.slice(0, -3)}ogg`,
     });
   }
-  } else {
-    const filePath = await transformAudio(ctx, sessionPath, "", true);
-    await ctx.sendChatAction("upload_audio");
-
-    if(ctx.session.phoneEffect){
-      await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
-    }
-
-    if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
-
-      if(ctx.session.phoneEffect){
-        await phoneCallEffects(ctx,sessionPath,"audio_out_cut.mp3")
-      } else {
-        await improveAudio(ctx,sessionPath,"audio_out_cut.mp3")
-      }
-      
-      // await ctx.sendVoice({
-      //   source: `${sessionPath}/audio_out_improve.mp3`,
-      //   reply_to_message_id: messageId // отвечаем на исходное сообщение
-      // });
-      // return
-
-    } 
-
-    if(ctx.session.voiceOrAudioOut === "audio"){
-      if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
-      await ctx.sendAudio({
-        source: `${sessionPath}/audio_out_improve.mp3`,
-      });
-      return
-    } else {
-      await ctx.sendAudio({
-        source: `${sessionPath}/audio_out_cut.mp3`,
-      });
-      return
-    }
-    } else {
-      if(ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect){
-      await convertToOgg(`${sessionPath}/audio_out_improve.mp3`)
-      await ctx.sendVoice({
-        source: `${sessionPath}/audio_out_improve.ogg`,
-      });
-      return
-    } else {
-      await convertToOgg(`${sessionPath}/audio_out_cut.mp3`)
-      await ctx.sendVoice({
-        source: `${sessionPath}/audio_out_cut.ogg`,
-      });
-      return
-    }
-    }    
-
-  }
-}catch(err){ctx.reply("Не удалось обработать файл, возможно он слишком большой.");}};
-
-export async function deletePreviousMessage(ctx) {
-  if (ctx.session.previousMessageId) {
-    try {
-      await ctx.deleteMessage(ctx.session.previousMessageId);
-    } catch (err) {
-      console.log("Ошибка при удалении сообщения:", err);
-    }
-  }
 }
 
-export const loadSettings = async (ctx) => {
-  try{
-  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-  const sessionPath = path.join('sessions', String(uniqueId));
-  const presetsFilePath = path.join(sessionPath, 'presets.json');
 
-  // Если файл presets.json уже существует, прочитаем его
-  if (fs.existsSync(presetsFilePath)) {
-    const presetsFileContent = fs.readFileSync(presetsFilePath);
-    const presets = JSON.parse(presetsFileContent);
+export const processAudioMessage = async (ctx, isAudio = false, audioPath = "", sessionPathIn = "") => {
+  try {
 
-    // Если в файле нет пресетов, сообщим об этом пользователю
-    if (Object.keys(presets).length === 0) {
-      ctx.reply('На данный момент у вас нет сохраненных пресетов.', Markup.inlineKeyboard([
-        Markup.button.callback('Меню', 'menu')
-      ]));
-    } else {
-      // Создаем кнопки для каждого пресета
-      const buttons = Object.keys(presets).map(presetName => {
-        return Markup.button.callback(presetName, `select_preset:${presetName}`);
-      });
-
-      // Добавляем кнопку "Меню"
-      buttons.push(Markup.button.callback('Меню', 'menu'));
-
-      // Отправляем пользователю меню с пресетами
-      ctx.reply('Выберите пресет для загрузки:', Markup.inlineKeyboard(buttons, { columns: 2 }).resize());
+    // Create SessionPath
+    let sessionPath = createSessionFolder(ctx)
+    if (sessionPathIn) {
+      sessionPath = sessionPathIn;
     }
-  } else {
-    // Если файл presets.json не существует, сообщим об этом пользователю
-    ctx.reply('У вас нет сохраненных пресетов.', Markup.inlineKeyboard([
-      Markup.button.callback('Меню', 'menu')
-    ]));
-  }
-}catch(err){
-    ctx.reply("Произошла ошибка, файл с пресетами был удален")
-
-    const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-    const sessionPath = path.join('sessions', String(uniqueId));
-    const presetsFilePath = path.join(sessionPath, 'presets.json');
-    if (fs.existsSync(presetsFilePath)) {
-      fs.unlink(presetsFilePath, (err) => {
-        if (err) {
-          console.error(`Ошибка при удалении файла: ${err}`);
-        }
-      });
+    // создаем папку сессии, если она еще не существует
+    if (!fs.existsSync(sessionPath)) {
+      fs.mkdirSync(sessionPath, { recursive: true });
     }
-  }
-}
+
+    handleAudio(ctx, sessionPath, audioPath, isAudio, ctx.message.message_id)
+  } catch (err) { ctx.reply("Не удалось обработать файл, возможно он слишком большой."); }
+};
 
 export function saveSuggestion(username, suggestion) {
   const filename = 'suggestions.json';
@@ -685,41 +536,6 @@ export function saveSuggestion(username, suggestion) {
     if (err) throw err;
     console.log(`Suggestion from ${username} has been saved.`);
   });
-}
-
-export function noteOctaveToFrequency(note, octave) {
-  var noteMap = {
-      'C': -9,
-      'C#': -8,
-      'Db': -8,
-      'D': -7,
-      'D#': -6,
-      'Eb': -6,
-      'E': -5,
-      'F': -4,
-      'F#': -3,
-      'Gb': -3,
-      'G': -2,
-      'G#': -1,
-      'Ab': -1,
-      'A': 0,
-      'A#': 1,
-      'Bb': 1,
-      'B': 2
-  };
-
-  var noteNumber = noteMap[note.toUpperCase()] + (octave - 4) * 12;
-  var a4Freq = 440;
-  var frequency = a4Freq * Math.pow(2, noteNumber / 12);
-
-  // Ограничиваем диапазон частоты от 1 до 16000 Гц
-  if (frequency < 1) {
-    return 1;
-  } else if (frequency > 16000) {
-    return 16000;
-  } else {
-    return frequency;
-  }
 }
 
 

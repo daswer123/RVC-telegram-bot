@@ -3,7 +3,7 @@ import { Markup } from "telegraf";
 import { registerAdminCommands } from "./admin/botCommands.js";
 import { showCurrentSettings, showMenu } from "./menus/mainMenu.js";
 import { showSettings } from "./menus/settingsMenu.js";
-import { loadSettings } from "./botFunction.js";
+import { loadSettings } from "./presets/botFunctions.js";
 import { showAICoverSettings } from "./menus/aicoverMenu.js";
 import { groupCharactersByCategory } from "./characters/botFunctions.js";
 
