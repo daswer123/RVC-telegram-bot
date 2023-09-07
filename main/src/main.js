@@ -403,7 +403,7 @@ bot.on("audio", async (ctx) => {
 bot.launch();
 
 // Restart msg
-sendMessageToAllUsers("Бот был перезапущен, все настройки сброшенны\nВведите /start для начала работы", bot)
+sendMessageToAllUsers("Бот был перезапущен, все запросы сброшенны\nВведите /start для начала работы", bot)
 // sendMessageToAllUsers("Бот был обновлен, все подробности в информационном канале https://t.me/mister_parodist_info", bot)
 // sendMessageToAllUsers("Бот временно не работает, тех.работы", bot)
 

@@ -4,6 +4,8 @@ import { showCreateMenu } from "../menus/createModelMenu.js";
 import { Markup } from "telegraf";
 import { saveTrainModelInfoToDB } from "../server/db.js";
 
+import { getRandomFileContent } from "../functions.js"
+
 export function registerCreateMenuBotActions(bot) {
   bot.action("create_voice_info", async (ctx) => {
     await ctx.reply(`Итак перед тем как дать инструкцию о том что нужно сделать что бы получить свою языковую модель, хочу уточнить пару деталей \nАвтоматического создания модели нет и все образцы которые вы запишете через эти кнопки, я смогу обучить через какое-то время, я сделаю оповещение когда модель будет готова.`)

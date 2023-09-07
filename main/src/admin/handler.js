@@ -1,5 +1,6 @@
-import { banUser, getUserByUsernameFromDatabase, getUserFromDatabase, unbanUser, updateUserStatusInDatabase } from "../server/db.js";
+import { banUser, getUserByUsernameFromDatabase, getUserFromDatabase, unbanUser, updatePresetInDatabase, updateUserStatusInDatabase } from "../server/db.js";
 import { sendMessageToAllUsers } from "./botFunctions.js";
+import { showAdminMenu } from "./menu.js";
 
 export async function adminHandler(ctx, bot) {
 
@@ -43,6 +44,15 @@ export async function adminHandler(ctx, bot) {
         return;
     }
 
+    if (ctx.session.waitForPrivatModel) {
+        ctx.session.waitForPrivatModel = false
+        const [id, presetName, model_path, index_path, name] = ctx.message.text.split(";")
+
+        updatePresetInDatabase(id, presetName, model_path, index_path, name)
+        ctx.reply("Успех, приватная модель установленна")
+        showAdminMenu(ctx)
+        return
+    }
 
 
     if (ctx.session.waitForControlPower) {

@@ -15,7 +15,8 @@ export async function showSettings(ctx) {
   const autoTuneDesc = `Автотюн, который регулируется нейросетью, конфликтует с автотюном в эффектах, так что может работать только 1`
   const aboutMinMax = `Min-Max Pitch, определяет допустимый диапазон частоты (pitch), применяемый в методе rmvpe+.\nДопустимые значения в Гц варьируются от 1 до 16000.Также вы можете использовать музыкальные ноты для определения диапазона.Например, 'C0' соответствует частоте примерно 16 Гц, а 'E10' соответствует частоте примерно 15600 Гц.`
 
-  const settingsMessage = [pithDescription, aboutMinMax, methodDescription, mangioCrepeHopDescription, featureRatioDescription, protectVoicelessDescription, autoTuneDesc, voiceActorDescription, outputType].join("\n\n");
+  const aboutReset = `Вы можете сбросить ваши настройки до стандартных с помощью команды /reset`
+  const settingsMessage = [pithDescription, aboutMinMax, methodDescription, mangioCrepeHopDescription, featureRatioDescription, protectVoicelessDescription, autoTuneDesc, voiceActorDescription, outputType, aboutReset].join("\n\n");
 
   const settingsKeyboard = Markup.inlineKeyboard([
     [Markup.button.callback(`Pith: ${session.pith}`, "set_pith"), Markup.button.callback(`Method: ${session.method}`, "set_method")],

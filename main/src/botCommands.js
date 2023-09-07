@@ -1,4 +1,4 @@
-import { characters } from "./variables.js";
+import { INITIAL_SESSION, characters } from "./variables.js";
 import { Markup } from "telegraf";
 import { registerAdminCommands } from "./admin/botCommands.js";
 import { showCurrentSettings, showMenu } from "./menus/mainMenu.js";
@@ -15,6 +15,7 @@ export async function setBotCommands(bot) {
     { command: "start", description: "Начать работу с ботом" },
     { command: "menu", description: "Показать меню" },
     { command: "characters", description: "Выбрать персонажа" },
+    { command: "reset", description: "Сбросить настройки до стандартных" },
     { command: "settings", description: "Настройки голоса" },
     { command: "aisettings", description: "Настройки AI кавера" },
     { command: "current_settings", description: "Показать текущие настройки" },
@@ -36,6 +37,7 @@ export function registerBotCommands(bot) {
         "/settings - настройки голоса\n" +
         "/aisettings - настройки AI кавера\n" +
         "/current_settings - Показать текущие настройки\n" +
+        "/reset - Сбросить настройки до стандартных\n" +
         "/menu - показать меню\n" +
         "/cover - сделать AI кавер голосом выбранного персонажа\n" +
         "/separate - разделить аудио на вокал и инструментал\n" +
@@ -116,6 +118,13 @@ export function registerBotCommands(bot) {
     try {
 
       await loadSettings(ctx);
+    } catch (e) { console.log(e) }
+  })
+
+  bot.command("reset", async (ctx) => {
+    try {
+      ctx.session = { ...INITIAL_SESSION }
+      ctx.reply("Настройки сброшенны до стандартных")
     } catch (e) { console.log(e) }
   })
 

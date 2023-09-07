@@ -111,6 +111,11 @@ export function registerAdminBotActions(bot) {
 
 
 
+
+    bot.action("admin_make_privat_model", async (ctx) => {
+        ctx.session.waitForPrivatModel = true
+        ctx.reply("Введите данные в формате:\nID;Название Пресета;путь к модели;Путь к индексу;имя модели")
+    })
     bot.action("admin_control_power", async (ctx) => {
         ctx.session.waitForControlPower = true
         ctx.reply("Введите 3 числа через запятую, эти числа значат нагрузку на:\n1)Преобразование\n2)TTS\n3)Разделение аудио\nПример: 1,1,1")

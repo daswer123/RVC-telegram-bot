@@ -137,6 +137,23 @@ export function getPresetsFromDatabase(userId) {
     return presetNames;
 }
 
+// Функция для обновления значений пресета в базе данных
+export function updatePresetInDatabase(userId, presetName, model_path, index_path, name) {
+    userId = Math.floor(userId);
+    // Получаем текущие данные пресета
+    let presetData = getPresetFromDatabase(userId, presetName);
+    if (!presetData) {
+        console.error(`Preset with name ${presetName} not found for user ${userId}`);
+        return;
+    }
+    // Обновляем значения в данных пресета
+    presetData.model_path = model_path;
+    presetData.index_path = index_path;
+    presetData.name = name;
+    // Сохраняем обновленные данные пресета обратно в базу данных
+    savePresetsToDatabase(userId, presetName, presetData);
+}
+
 // Функция для получения пресета из базы данных
 export function getPresetFromDatabase(userId, presetName) {
     userId = Math.floor(userId);
