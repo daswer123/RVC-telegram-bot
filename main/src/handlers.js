@@ -5,10 +5,11 @@ import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
 import { createVoice, downloadFromYoutube, logUserSession, slowDownAudioYa } from "./functions.js";
-import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url, separateAudioBot, checkForLimits } from "./botFunction.js";
+import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url, checkForLimits } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";
 import { handleAICoverMaxQueue, transfromAudioMaxQueue } from "./variables.js";
 import { getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
+import { separateAudioBot } from "./separate/botFunctios.js";
 
 // import { registerAdminBotActions } from "./admin/botActions.js";
 // import { registerCreateMenuBotActions } from "./createModel/botActions.js";

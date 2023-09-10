@@ -1,6 +1,6 @@
 import { Telegraf, Markup, session } from "telegraf";
 import { message } from "telegraf/filters";
-import { downloadFile, mergeAudioFilesToMp3 } from "./functions.js";
+import { downloadFile, handleDenoiseAudio, mergeAudioFilesToMp3 } from "./functions.js";
 import config from "config";
 import fs from "fs";
 import path from "path";
@@ -9,7 +9,7 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
 import { INITIAL_SESSION } from "./variables.js"
 import { setBotCommands, registerBotCommands } from "./botCommands.js";
-import { processAudioMessage, is_youtube_url, separateAudioBot, printCurrentTime, processVideo, processAiCover, checkForBan, createSessionFolder } from "./botFunction.js";
+import { processAudioMessage, is_youtube_url, printCurrentTime, processVideo, processAiCover, checkForBan, createSessionFolder } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
 
 import { handlePredlog, handleYoutubeCover, textHandler, handleTestVoices, handleMIddleware } from "./handlers.js";
@@ -23,7 +23,8 @@ import { showMenu } from "./menus/mainMenu.js";
 import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
 import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
-import { separateV1Hanlder } from "./separate/handler.js";
+import { denoiseHanlder, separate6ItemsHanlder, separateV1Hanlder, separateV2Hanlder } from "./separate/handler.js";
+import { separateAudioBot, separateAudioBot6Items, separateAudioBotv2 } from "./separate/botFunctios.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -145,6 +146,8 @@ bot.on(message("text"), async (ctx) => {
       effectHanlder(ctx),
       createModelHanlder(ctx),
       separateV1Hanlder(ctx),
+      separateV2Hanlder(ctx),
+      separate6ItemsHanlder(ctx),
       handleSettings(ctx),
       ctx.session.waitForPredlog ? handlePredlog(ctx) : Promise.resolve(false),
       ctx.session.waitForPresetSave ? handlePresetSave(ctx) : Promise.resolve(false),
@@ -190,12 +193,29 @@ bot.on("audio", async (ctx) => {
 
   const sessionPath = createSessionFolder(ctx)
 
+
   try {
 
     handleCreateModelVoice(ctx)
 
+    if (ctx.session.waitForDenoise) {
+      denoiseHanlder(ctx)
+      ctx.session.waitForDenoise = false
+      return
+    }
+
     if (ctx.session.waitForSeparate) {
       await separateAudioBot(ctx, sessionPath)
+      return
+    }
+
+    if (ctx.session.waitForSeparatev2) {
+      await separateAudioBotv2(ctx)
+      return
+    }
+
+    if (ctx.session.waitForSeparate6Items) {
+      await separateAudioBot6Items(ctx)
       return
     }
 

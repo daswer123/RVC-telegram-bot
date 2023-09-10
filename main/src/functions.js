@@ -9,6 +9,7 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import pkg from 'number-to-words-ru';
 import { promisify } from 'util';
 import { addLogToDatabase } from './server/db.js';
+import { renameDemucsFiles } from './separate/botFunctios.js';
 
 
 const { convert: convertNumberToWordsRu } = pkg;
@@ -231,6 +232,38 @@ export async function compressMp3(inputFile, outputFile = null, quality = 2) {
   });
 }
 
+export async function compressMp3Same(inputFile, quality = 2) {
+  // Создаем временный файл для сжатия
+  const outputFile = path.join(path.dirname(inputFile), `tmp_${path.basename(inputFile)}`);
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputFile)
+      .output(outputFile)
+      .audioCodec('libmp3lame')
+      .audioQuality(quality)
+      .outputOptions('-y')
+      .on('end', async () => {
+        console.log('Сжатие завершено');
+
+        // Переименовываем временный файл в изначальный после сжатия
+        try {
+          await fspr.rename(outputFile, inputFile);
+          resolve(inputFile);
+        } catch (err) {
+          console.error('Ошибка при переименовании файла:', err);
+          reject(err);
+        }
+      })
+      .on('error', (err) => {
+        console.error('Ошибка сжатия:', err.message);
+        reject(err);
+      })
+      .run();
+  });
+}
+
+
+
 let options;
 
 export const getVocalFilePath = async (searchDirectory) => {
@@ -308,6 +341,48 @@ export const improveAudio = async (ctx, sessionPath, filename) => {
 }
 
 export const phoneCallEffects = async (ctx, sessionPath, filename) => {
+  let mp3Path = `${sessionPath}/${filename}`;
+
+  let optionss = {
+    mode: 'text',
+    pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+    pythonOptions: ['-u'], // get print results in real-time
+    scriptPath: config.get("AUDIO_SEP_PATH"),
+    args: [
+      mp3Path,
+      `${sessionPath}/audio_out_improve.mp3`,
+      // 500,
+      // 1000
+    ]
+  };
+
+  const messages = await PythonShell.run('phonecall.py', optionss)
+  return messages
+
+}
+
+export const addReverbEffect = async (ctx, sessionPath, filename) => {
+  let mp3Path = `${sessionPath}/${filename}`;
+
+  let optionss = {
+    mode: 'text',
+    pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+    pythonOptions: ['-u'], // get print results in real-time
+    scriptPath: config.get("AUDIO_SEP_PATH"),
+    args: [
+      mp3Path,
+      `${sessionPath}/audio_out_improve.mp3`,
+      // 500,
+      // 1000
+    ]
+  };
+
+  const messages = await PythonShell.run('phonecall.py', optionss)
+  return messages
+
+}
+
+export const addEchoEffect = async (ctx, sessionPath, filename) => {
   let mp3Path = `${sessionPath}/${filename}`;
 
   let optionss = {
@@ -492,6 +567,66 @@ export async function handleSeparateAudio(ctx, sessionPath, isAudio = false) {
   }
 }
 
+export async function handleSeparateAudiov2(sessionPath, filename = "audio.wav", isAudio = false) {
+  try {
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    const vocalPathh = path.join(fullSessionPath, "vocals.mp3");
+    const instrumentalPathh = path.join(fullSessionPath, "no_vocals.mp3");
+
+    await separateAudiov2(sessionPath, filename, "htdemucs");
+
+    return { vocalPathh, instrumentalPathh }
+  } catch (err) {
+    console.log(err)
+  }
+
+}
+
+export async function handleSeparateAudio6Items(sessionPath, filename = "audio.wav", isAudio = false) {
+  try {
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    // const vocalPathh = path.join(fullSessionPath, "vocals.mp3");
+    // const instrumentalPathh = path.join(fullSessionPath, "no_vocals.mp3");
+
+    await separateAudio6Items(sessionPath, filename, "htdemucs_6s");
+
+    const newPath = path.join(sessionPath, "6s")
+    const files = await fspr.readdir(newPath);
+
+    console.log("Сжимаем файлы")
+    for (let file of files) {
+      if (path.extname(file) === '.mp3') { // Сжимаем и отправляем только mp3 файлы
+        const filePath = path.join(newPath, file);
+        await compressMp3Same(filePath, 2)
+      }
+    }
+
+
+    return
+  } catch (err) {
+    console.log(err)
+  }
+
+}
+
+export async function handleDenoiseAudio(sessionPath, filename = "audio.wav", isAudio = false) {
+  try {
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    // const vocalPathh = path.join(fullSessionPath, "vocals.mp3");
+    // const instrumentalPathh = path.join(fullSessionPath, "no_vocals.mp3");
+
+    await denoiseAudioFunc(sessionPath, filename);
+
+
+    return
+  } catch (err) {
+    console.log(err)
+  }
+
+}
+
+
+
 export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
   // Создаем папку сессии, если она еще не существует
   if (!fs.existsSync(sessionPath)) {
@@ -501,14 +636,16 @@ export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
   const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
   const vocalPath = path.join(fullSessionPath, "vocal.mp3");
   const instrumentalPath = path.join(fullSessionPath, "instrumental.mp3");
-  let sessionOutputPath = path.join(fullSessionPath, "audio_out.mp3");
+  let sessionOutputPath = path.join(fullSessionPath, "audio_out_cut.mp3");
   const resultPath = path.join(fullSessionPath, "result.mp3");
 
   let vocalPathDeEcho, vocalString;
 
   vocalString = "Вокал"
 
-  await separateAudio(sessionPath, "audio.wav");
+  await separateAudiov2(sessionPath, "audio.wav");
+
+  await compressMp3Same(instrumentalPath, 2)
 
   if (ctx.session.audioProcessPower === "echo" || ctx.session.audioProcessPower === "both") {
     await separateAudio(sessionPath, "vocal.mp3", "DeReverb");
@@ -685,6 +822,94 @@ export async function separateAudio(sessionPath, filename = "audio.wav", model_n
   }
 }
 
+export async function separateAudiov2(sessionPath, filename = "audio.wav", model_name = "htdemucs") {
+  // Acquire semaphore before doing any work
+  try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        `${sessionPath}/${filename}`,
+        `${sessionPath}`,
+        model_name,
+        2
+      ]
+    };
+
+    const messages = await PythonShell.run('separatev2.py', optionss);
+
+    let sessionVocalPath, sessonInstrumentalPath;
+
+    sessionVocalPath = path.join(sessionPath, "vocal.mp3")
+    sessonInstrumentalPath = path.join(sessionPath, "instrumental.mp3")
+
+    console.log("1", sessionVocalPath, sessonInstrumentalPath, "3")
+    await renameDemucsFiles(sessionPath)
+
+    console.log("Файл успешно преобразован")
+    return { sessionVocalPath, sessonInstrumentalPath }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function separateAudio6Items(sessionPath, filename = "audio.wav", model_name = "htdemucs") {
+  // Acquire semaphore before doing any work
+  try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        `${sessionPath}/${filename}`,
+        `${sessionPath}/6s`,
+        model_name,
+        2
+      ]
+    };
+
+    const messages = await PythonShell.run('separatev2.py', optionss);
+
+    console.log("Файл успешно преобразован")
+    return sessionPath
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function denoiseAudioFunc(sessionPath, audio_path = "audio.wav", model_path = "URV_Models/denoise.pth", outpath = "") {
+  try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("RVC_SCRIPT_PATH"),
+      args: [
+        '--model_path', model_path,
+        '--audio_path', `${sessionPath}/${audio_path}`,
+        '--save_path', `${sessionPath + outpath}`
+      ]
+    };
+
+    const messages = await PythonShell.run('infer_uvr5.py', optionss);
+
+    let sessionVocalPath;
+
+    sessionVocalPath = await getVocalFilePath(sessionPath + outpath)
+
+    await convertWavToMp3(sessionVocalPath, `${sessionPath}/vocal_de_back.mp3`);
+
+    console.log("Файл успешно преобразован")
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+
 export async function separateAudioVR(sessionPath, audio_path = "audio.wav", model_path = "URV_Models/hp_5_back.pth", outpath = "") {
   try {
     let optionss = {
@@ -712,6 +937,7 @@ export async function separateAudioVR(sessionPath, audio_path = "audio.wav", mod
     console.error(err);
   }
 }
+
 
 // Создайте экземпляр семафора
 

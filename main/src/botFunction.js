@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, separateAudioVR, compressMp3, logUserSession, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects, handleAICover, handleSeparateAudio } from "./functions.js";
+import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, compressMp3, logUserSession, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects, handleAICover, handleSeparateAudio } from "./functions.js";
 import { INITIAL_SESSION, handleAICoverMaxQueue, separateAudioMaxQueue, transfromAudioMaxQueue } from "./variables.js";
 import config from "config";
 import fs from "fs";
@@ -93,70 +93,6 @@ export function printCurrentTime() {
 
   console.log(timeString);
 }
-
-export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
-  try {
-
-    if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
-
-    const prevState = ctx.session.audioProcessPower
-    ctx.session.audioProcessPower = "both"
-
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
-    }
-
-    if (!isAudio) {
-      const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
-      await downloadFile(link, `${sessionPath}/audio.wav`);
-    }
-
-    await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
-
-    const response = await axios.post('http://localhost:8081/separateAudio', {
-      session: ctx.session,
-      sessionPath: sessionPath,
-      isAudio: isAudio,
-      userId: ctx.from.id
-    });
-
-    const { vocalPath, instrumentalPath, vocalPathDeEcho, vocalString } = response.data;
-
-    await ctx.reply(vocalString)
-    await ctx.sendAudio({ source: vocalPath });
-
-    if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "echo" || ctx.session.audioProcessPower === "both") {
-      await ctx.sendAudio({ source: vocalPathDeEcho });
-
-      const sourcePath = `${sessionPath}/out_back/instrument_vocal_de_echo.mp3_10.wav`;
-      const destinationPath = `${sessionPath}/backvocal.mp3`;
-      const readyDestPath = `${sessionPath}/backvocall.mp3`
-
-      fs.rename(sourcePath, destinationPath, async function (err) {
-        if (err) {
-          console.log('ERROR: ' + err);
-        }
-        else {
-          await ctx.reply("Отдельно бек вокал")
-          await compressMp3(destinationPath, `${sessionPath}/backvocall.mp3`)
-          await ctx.sendAudio({ source: readyDestPath });
-        }
-      });
-    }
-
-    await ctx.reply("Инструментал")
-    await ctx.sendAudio({ source: instrumentalPath });
-
-    await logUserSession(ctx, "Separate_Audio")
-
-
-    ctx.session.audioProcessPower = prevState
-  } catch (err) {
-    console.log(err)
-    ctx.reply("Произошла ошибка, попробуйте снова. Возможно файл который вы загрузили слишком большой. Должен быть не более 19мб.")
-  }
-}
-
 
 
 export async function processVideo(ctx, sessionPath) {
@@ -310,7 +246,6 @@ export const processAiCover = async (ctx) => {
   try {
     const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
     await downloadFile(link, `${sessionPath}/audio.wav`);
-    ctx.reply("Обработка аудио...")
 
     await process_audio_file(ctx, sessionPath, filename);
 

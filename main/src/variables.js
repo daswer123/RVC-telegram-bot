@@ -29,6 +29,8 @@ export const INITIAL_SESSION = {
   settingVoiceSpeed: false,
   waitForPresetSave: false,
   waitForSeparate: false,
+  waitForSeparatev2: false,
+  waitForSeparate6Items: false,
   waitForVoice: false,
   waitForModelName: false,
   waitForModelDesc: false,

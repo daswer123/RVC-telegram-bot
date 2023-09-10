@@ -10,9 +10,9 @@ export async function showSeparateMenu(ctx) {
         const settingsMessage = [mainDesk].join("\n\n");
 
         const settingsKeyboard = Markup.inlineKeyboard([
-            [Markup.button.callback("Разделить Аудио v2", "set_audio_process_power")],
-            [Markup.button.callback("Разделить Аудио на 6", "set_audio_process_power")],
-            [Markup.button.callback("Удалить шум", "set_audio_process_power")],
+            [Markup.button.callback("Разделить Аудио v2", "separatev2")],
+            [Markup.button.callback("Разделить Аудио на 6 частей", "separate6items")],
+            // [Markup.button.callback("Удалить шум", "denoise")],
             [Markup.button.callback("Разделить Аудио v1 (скоро будет удален)", "separate")],
             [Markup.button.callback("Меню", "menu")],
         ]).resize();
