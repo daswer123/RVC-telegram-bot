@@ -8,6 +8,7 @@ import { createVoice, downloadFromYoutube, logUserSession, slowDownAudioYa } fro
 import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url, separateAudioBot, checkForLimits } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";
 import { handleAICoverMaxQueue, transfromAudioMaxQueue } from "./variables.js";
+import { getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
 
 // import { registerAdminBotActions } from "./admin/botActions.js";
 // import { registerCreateMenuBotActions } from "./createModel/botActions.js";
@@ -97,15 +98,15 @@ export async function textHandler(ctx) {
     const username = ctx.from.username; // получаем ник пользователя
     const sessionPath = `sessions/${uniqueId}/${messageId}`;
 
-    if (!ctx.session.voiceActor.startsWith("yandex_")) {
-      const { newFilePath, slowedFilePath } = await technicalHandler(ctx, { uniqueId, messageId, username, sessionPath })
+    // if (!ctx.session.voiceActor.startsWith("yandex_")) {
+    const { newFilePath, slowedFilePath } = await technicalHandler(ctx, { uniqueId, messageId, username, sessionPath })
 
-      if (ctx.session.mergeAudio || ctx.session.waitingForCover) {
-        ctx.session.mergeAudio = false;
-        ctx.session.waitingForCover = false;
-        await ctx.reply("Отмена операции");
-        return
-      }
+    if (ctx.session.mergeAudio || ctx.session.waitingForCover) {
+      ctx.session.mergeAudio = false;
+      ctx.session.waitingForCover = false;
+      await ctx.reply("Отмена операции");
+      return
+      // }
     }
   } catch (err) {
     await ctx.reply("Что-то пошло не так. Попробуйте снова")
@@ -200,14 +201,51 @@ function moveFile(sourcePath, destinationPath) {
   fs.renameSync(sourcePath, destinationPath);
 }
 
-function writeUsernameFile(sessionPath, username, uniqueId, messageId) {
-  try {
-    // создаем текстовый файл с именем пользователя
-    const filename = `${username}.txt`;
-    const filepath = path.join(sessionPath, filename);
-    fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
-  } catch (err) {
-    console.log(err)
+export async function handleMIddleware(ctx, next) {
+  const session = await getSessionFromDatabase(ctx.from.id);
+
+  if (session) {
+    ctx.session = session;
+  } else {
+    ctx.session = { ...INITIAL_SESSION };
   }
+
+  // Проверка наличия пользователя в базе данных
+  if (!ctx.session.inDatabase) {
+    const user = await getUserFromDatabase(ctx.from.id);
+    if (!user) {
+      // Если пользователя нет в базе данных, добавляем его и присваиваем статус 'default'
+      await saveUserToDatabase(ctx.from.id, ctx.from.username, "default");
+    }
+    // Помечаем, что пользователь теперь в базе данных
+    ctx.session.inDatabase = true;
+  }
+
+  try {
+    if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
+      ctx.session = { ...ctx.session.loadConfig };
+
+      // очистка объекта loadConfig после присвоения сессии
+      ctx.session.loadConfig = {};
+    }
+  } catch (err) {
+    console.log(err, "err")
+  }
+
+  await next(); // Обработка сообщения ботом
+
+  // Сохранение сессии в базу данных после ответа бота
+  await saveSessionToDatabase(ctx.from.id, ctx.session);
 }
 
+export async function handleTestVoices(ctx) {
+  if (ctx.session.testVoice) {
+    for (let i = 0; i < 12; i++) {
+      ctx.session.pith = i;
+      await ctx.reply("Текущая высота тона: " + i)
+      await processAudioMessage(ctx)
+      printCurrentTime()
+    }
+    ctx.session.testVoice = false
+  }
+}

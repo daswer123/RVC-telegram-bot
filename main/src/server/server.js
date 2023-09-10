@@ -60,6 +60,7 @@ app.post('/transformAudio', async (req, res) => {
         } catch (error) {
             console.log(error)
             res.status(500).json({ message: 'Error transforming audio', error });
+            deleteOperationFromDatabase(operationId);
         }
     });
 
@@ -93,6 +94,7 @@ app.post('/handleAICover', async (req, res) => {
     } catch (error) {
         console.error(`Error during AI cover processing: ${error}`);
         res.status(500).json({ message: 'An error occurred while processing the AI cover', error: error.toString() });
+        deleteOperationFromDatabase(operationId);
     } finally {
         console.log(`Осталось запросов в создании ИИ кавера ${handleAICoverQueue.size}`);
     }
@@ -124,6 +126,7 @@ app.post('/separateAudio', async (req, res) => {
     } catch (error) {
         console.error(`Error during audio separation: ${error}`);
         res.status(500).json({ message: 'An error occurred while separating the audio', error: error.toString() });
+        deleteOperationFromDatabase(operationId);
     } finally {
         console.log(`Осталось запросов в разделении аудио ${separateAudioQueue.size}`);
     }
@@ -132,7 +135,7 @@ app.post('/separateAudio', async (req, res) => {
     console.log(`Всего запросов ${getAllQueue()}`)
 });
 
-const server = app.listen(8080, () => {
+const server = app.listen(8081, () => {
     console.log(`Server is running on port ${server.address().port}`);
 });
 

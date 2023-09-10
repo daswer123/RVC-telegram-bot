@@ -36,7 +36,7 @@ export class Semaphore {
 
 export async function tranformAudioServer(ctx, sessionPath, audioPath = "", setMp3 = false, ctxx = "") {
   try {
-    const response = await axios.post('http://localhost:8080/transformAudio', {
+    const response = await axios.post('http://localhost:8081/transformAudio', {
       session: ctx.session,
       sessionPath: sessionPath,
       audioPath: audioPath,
@@ -151,7 +151,7 @@ export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
 
     await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-    const response = await axios.post('http://localhost:8080/separateAudio', {
+    const response = await axios.post('http://localhost:8081/separateAudio', {
       session: ctx.session,
       sessionPath: sessionPath,
       isAudio: isAudio,
@@ -290,7 +290,7 @@ export async function process_audio_file(ctx, sessionPath, filename = "audio.wav
 
     ctx.reply("Ваш запрос на создание AI кавера был добавлен в очередь, ожидайте\nТекущую очередь вы можете увидеть по команде /pos");
 
-    const response = await axios.post('http://localhost:8080/handleAICover', {
+    const response = await axios.post('http://localhost:8081/handleAICover', {
       session: ctx.session,
       sessionPath: sessionPath,
       filename: filename,

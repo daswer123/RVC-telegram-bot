@@ -188,6 +188,6 @@ export const FEMALE_VOICES = [
   { name: "Alyss", id: "yandex_alyss" },
 ];
 
-export const transfromAudioMaxQueue = 5
-export const handleAICoverMaxQueue = 3
-export const separateAudioMaxQueue = 2
+export const transfromAudioMaxQueue = 99
+export const handleAICoverMaxQueue = 99
+export const separateAudioMaxQueue = 99

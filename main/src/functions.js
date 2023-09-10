@@ -8,16 +8,10 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import pkg from 'number-to-words-ru';
 import { promisify } from 'util';
-import { Semaphore } from './botFunction.js';
 import { addLogToDatabase } from './server/db.js';
 
 
 const { convert: convertNumberToWordsRu } = pkg;
-// const semaphore = new Semaphore(1);
-// const semaphore_for_sep = new Semaphore(1);
-// const semaphore_for_voice = new Semaphore(1);
-
-let semaphore, semaphore_for_sep, semaphore_for_voice;
 
 const readdir = promisify(fs.readdir);
 const readFile = promisify(fs.readFile);
@@ -56,25 +50,6 @@ export async function convertToOgg(inputPath) {
       })
       .save(outputPath);
   });
-}
-
-
-async function readNumbersFromJson() {
-  const path = './config/power.json';
-  let json;
-  if (fs.existsSync(path)) {
-    const data = fs.readFileSync(path, 'utf-8');
-    json = JSON.parse(data);
-  } else {
-    json = {
-      "transform": "1",
-      "silero": "1",
-      "separate": "1"
-    };
-    fs.writeFileSync(path, JSON.stringify(json), 'utf-8');
-  }
-
-  return [Number(json.transform), Number(json.silero), Number(json.separate)];
 }
 
 // Указываем путь к ffmpeg
@@ -148,10 +123,6 @@ export const splitVideoAndAudio = async (filePath, sessionPath) => {
     extractAudio(filePath, audioOutput),
     extractVideo(filePath, videoOutput),
   ]);
-
-  // fs.unlink(filePath, (err) => {
-  //   if (err) console.error(`Error deleting file: ${err}`);
-  // });
 
   return [videoOutput, audioOutput];
 };
@@ -588,53 +559,6 @@ export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
   return { vocalPathDeEcho, sessionOutputPath, instrumentalPath, resultPath };
 }
 
-
-// Записывает ID пользователя в файл ban.json
-export function banUser(userId) {
-  const path = './config/ban.json';
-  // Прочитать текущий список забаненных пользователей
-  let bannedUsers = [];
-  if (fs.existsSync(path)) {
-    const data = fs.readFileSync(path, 'utf-8');
-    bannedUsers = JSON.parse(data);
-  }
-
-  // Добавить нового пользователя, если он еще не забанен
-  if (!bannedUsers.includes(userId)) {
-    bannedUsers.push(userId);
-    fs.writeFileSync(path, JSON.stringify(bannedUsers, null, 2));
-  }
-}
-
-// Удаляет ID пользователя из файла ban.json
-export function unbanUser(userId) {
-  const path = './config/ban.json';
-  // Прочитать текущий список забаненных пользователей
-  let bannedUsers = [];
-  if (fs.existsSync(path)) {
-    const data = fs.readFileSync(path, 'utf-8');
-    bannedUsers = JSON.parse(data);
-  }
-
-  // Убрать пользователя, если он забанен
-  const index = bannedUsers.indexOf(userId);
-  if (index !== -1) {
-    bannedUsers.splice(index, 1);
-    fs.writeFileSync(path, JSON.stringify(bannedUsers, null, 2));
-  }
-}
-
-// Возвращает массив с ID всех забаненных пользователей
-export function getBannedUsers() {
-  const path = './config/ban.json';
-  if (fs.existsSync(path)) {
-    const data = fs.readFileSync(path, 'utf-8');
-    return JSON.parse(data);
-  }
-  // Возвращаем пустой массив, если файл не существует
-  return [];
-}
-
 export async function deleteFolderContents(directory) {
   fs.readdir(directory, (err, files) => {
     if (err) throw err;
@@ -822,7 +746,7 @@ export async function createVoice(voice, text, id) {
 
 // const data = {
 //   speaker: "xenia",
-//   text: "Привет красавчик люблю тебя",
+//   text: "Привет",
 //   session: "string"
 // };
 

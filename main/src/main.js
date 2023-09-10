@@ -12,72 +12,40 @@ import { setBotCommands, registerBotCommands } from "./botCommands.js";
 import { processAudioMessage, is_youtube_url, separateAudioBot, printCurrentTime, processVideo, processAiCover, checkForBan, createSessionFolder } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
 
-import { handlePredlog, handleYoutubeCover, textHandler, separateHanlder } from "./handlers.js";
+import { handlePredlog, handleYoutubeCover, textHandler, separateHanlder, handleMIddleware, handleTestVoices } from "./handlers.js";
 import { sendMessageToAllUsers } from "./admin/botFunctions.js";
 import { adminHandler } from "./admin/handler.js";
 import { effectHanlder } from "./effects/handler.js";
-import { createModelHanlder } from "./createModel/handler.js";
+import { createModelHanlder, handleCreateModelVoice } from "./createModel/handler.js";
 
 
 import { showMenu } from "./menus/mainMenu.js";
 import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
-import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
+import { clearOperationsDatabase, getSessionFromDatabase, saveUserToDatabase } from "./server/db.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 export const bot = new Telegraf(config.get("TELEGRAM_TOKEN"), { handlerTimeout: 900_000 });
 bot.use(session());
-
-setBotCommands(bot);
-
 process.setMaxListeners(0);
 
 clearOperationsDatabase()
 
+setBotCommands(bot);
+registerBotActions(bot)
+registerBotCommands(bot)
 
 bot.use(async (ctx, next) => {
   // Попытка получить сессию из базы данных
-  const session = await getSessionFromDatabase(ctx.from.id);
-
-  if (session) {
-    ctx.session = session;
-  } else {
-    ctx.session = { ...INITIAL_SESSION };
-  }
-
-  // Проверка наличия пользователя в базе данных
-  if (!ctx.session.inDatabase) {
-    const user = await getUserFromDatabase(ctx.from.id);
-    if (!user) {
-      // Если пользователя нет в базе данных, добавляем его и присваиваем статус 'default'
-      await saveUserToDatabase(ctx.from.id, ctx.from.username, "default");
-    }
-    // Помечаем, что пользователь теперь в базе данных
-    ctx.session.inDatabase = true;
-  }
-
   try {
-    if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
-      ctx.session = { ...ctx.session.loadConfig };
-
-      // очистка объекта loadConfig после присвоения сессии
-      ctx.session.loadConfig = {};
-    }
+    handleMIddleware(ctx, next)
   } catch (err) {
-    console.log(err, "err")
+    console.log(err)
   }
-
-  await next(); // Обработка сообщения ботом
-
-  // Сохранение сессии в базу данных после ответа бота
-  await saveSessionToDatabase(ctx.from.id, ctx.session);
 });
 
-
-registerBotActions(bot)
-registerBotCommands(bot)
 
 bot.command("start", async (ctx) => {
   try {
@@ -105,16 +73,8 @@ bot.on("video", async (ctx) => {
   // if (protectBot(ctx)) return
   if (await checkForBan(ctx)) return
   try {
+    const sessionPath = createSessionFolder(ctx)
 
-
-    const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-    const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
-    const sessionPath = `sessions/${uniqueId}/${messageId}`;
-
-    // Создаем папку для пользователя, если она еще не существует
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
-    }
     await processVideo(ctx, sessionPath)
     await logUserSession(ctx, "video")
   } catch (err) {
@@ -161,67 +121,11 @@ bot.on("voice", async (ctx) => {
   if (await checkForBan(ctx)) return
 
   try {
+    handleCreateModelVoice(ctx)
+    handleTestVoices(ctx)
 
-    if (ctx.session.waitForVoice) {
-      const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-      const folderName = ctx.session.voiceModelName
-      let voicePath = `train_voice/${uniqueId}/${folderName}`;
+    processAudioMessage(ctx)
 
-      // создаем папку сессии, если она еще не существует
-      if (!fs.existsSync(voicePath)) {
-        fs.mkdirSync(voicePath, { recursive: true });
-      }
-
-      const date = new Date();
-      const timestamp = date.toISOString().replace(/[:.]/g, '-');
-
-      const link = await ctx.telegram.getFileLink(ctx.message.voice.file_id);
-
-      await downloadFile(link, `${voicePath}/${timestamp}-audio.mp3`);
-      ctx.reply("Ваш образец был добавлен в часть вашего набора данных", Markup.inlineKeyboard([
-        [
-          Markup.button.callback('Добавить ещё', 'create_voice_add_sample'),
-          Markup.button.callback('Получить текст', 'create_voice_random_text')
-        ],
-        [
-          Markup.button.callback('Меню', 'show_create_voice_menu')
-        ]
-      ]))
-      ctx.session.waitForVoice = false;
-      return
-    }
-
-    if (ctx.session.testVoice) {
-      for (let i = 0; i < 12; i++) {
-        ctx.session.pith = i;
-        await ctx.reply("Текущая высота тона: " + i)
-        await processAudioMessage(ctx)
-        printCurrentTime()
-      }
-      ctx.session.testVoice = false
-    }
-
-    // добавляем голосовое сообщение в очередь
-    ctx.state.voiceMessagesQueue = ctx.state.voiceMessagesQueue || [];
-    ctx.state.voiceMessagesQueue.push(ctx);
-
-    // если обработчик сообщений уже работает, не запускаем еще один
-    if (ctx.state.processingVoiceMessages) {
-      return
-    };
-
-    // обработка голосовых сообщений в очереди
-    (async () => {
-      ctx.state.processingVoiceMessages = true;
-
-      while (ctx.state.voiceMessagesQueue.length > 0) {
-        const nextCtx = ctx.state.voiceMessagesQueue.shift();
-        await processAudioMessage(nextCtx);
-        printCurrentTime()
-      }
-
-      ctx.state.processingVoiceMessages = false;
-    })();
   } catch (err) {
     ctx.reply("Произошла ошибка при обработки сообщения, попробуйте снова")
     console.log(err)
@@ -232,96 +136,19 @@ bot.on("audio", async (ctx) => {
   // if (protectBot(ctx)) return
   if (await checkForBan(ctx)) return
 
-  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-  const username = ctx.from.username; // получаем ник пользователя
-  const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
-  const sessionPath = `sessions/${uniqueId}/${messageId}`;
+  const sessionPath = createSessionFolder(ctx)
 
   try {
 
-    if (ctx.session.waitForVoice) {
-      const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-      const folderName = ctx.session.voiceModelName
-      let voicePath = `train_voice/${uniqueId}/${folderName}`;
-
-      // создаем папку сессии, если она еще не существует
-      if (!fs.existsSync(voicePath)) {
-        fs.mkdirSync(voicePath, { recursive: true });
-      }
-
-      const date = new Date();
-      const timestamp = date.toISOString().replace(/[:.]/g, '-');
-
-      const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
-
-      await downloadFile(link, `${voicePath}/${timestamp}-audio.mp3`);
-      ctx.reply("Ваш образец был добавлен в часть вашего набора данных", Markup.inlineKeyboard([
-        [
-          Markup.button.callback('Добавить ещё', 'create_voice_add_sample'),
-          Markup.button.callback('Получить текст', 'create_voice_random_text')
-        ],
-        [
-          Markup.button.callback('Меню', 'show_create_voice_menu')
-        ]
-      ]))
-      ctx.session.waitForVoice = false;
-      return
-    }
+    handleCreateModelVoice(ctx)
 
     if (ctx.session.waitForSeparate) {
-
-      // добавляем аудио сообщение в очередь
-      ctx.state.audioMessagesQueue = ctx.state.audioMessagesQueue || [];
-      ctx.state.audioMessagesQueue.push(ctx);
-
-      // если обработчик сообщений уже работает, не запускаем еще один
-      if (ctx.state.processingAudioMessages) {
-        await ctx.reply("Разделение аудио уже запущено у другово человека, подождите")
-        return
-      };
-
-      // обработка аудио сообщений в очереди
-      (async () => {
-        ctx.state.processingAudioMessages = true;
-
-        while (ctx.state.audioMessagesQueue.length > 0) {
-          const nextCtx = ctx.state.audioMessagesQueue.shift();
-          await ctx.reply("Начало обработки")
-          await separateAudioBot(nextCtx, sessionPath);
-          ctx.session.waitForSeparate = false;
-        }
-
-        ctx.state.processingAudioMessages = false;
-      })();
-
+      await separateAudioBot(nextCtx, sessionPath);
       return
     }
 
     if (ctx.session.waitingForCover) {
-
-      // добавляем голосовое сообщение в очередь
-      ctx.state.voiceMessagesQueue = ctx.state.voiceMessagesQueue || [];
-      ctx.state.voiceMessagesQueue.push(ctx);
-
-      // если обработчик сообщений уже работает, не запускаем еще один
-      if (ctx.state.processingVoiceMessages) {
-        await ctx.reply("Создание кавера уже запущено у другово человека, подождите")
-        return
-      };
-
-      // обработка голосовых сообщений в очереди
-      (async () => {
-        ctx.state.processingVoiceMessages = true;
-
-        while (ctx.state.voiceMessagesQueue.length > 0) {
-          const nextCtx = ctx.state.voiceMessagesQueue.shift();
-          await processAiCover(nextCtx);
-          ctx.session.waitingForCover = false;
-        }
-
-        ctx.state.processingVoiceMessages = false;
-      })();
-
+      await processAiCover(ctx);
       return
     }
     else if (ctx.session.mergeAudio) {
@@ -334,15 +161,6 @@ bot.on("audio", async (ctx) => {
       // создаем папку сессии, если она еще не существует
       if (!fs.existsSync(sessionPath)) {
         fs.mkdirSync(sessionPath, { recursive: true });
-      }
-
-      try {
-        // создаем текстовый файл с именем пользователя
-        const filename = `${username}.txt`;
-        const filepath = path.join(sessionPath, filename);
-        fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
-      } catch (err) {
-        console.log(err)
       }
 
       let link;
@@ -374,25 +192,7 @@ bot.on("audio", async (ctx) => {
 
     }
     else {
-      // добавляем голосовое сообщение в очередь
-      ctx.state.voiceMessagesQueue = ctx.state.voiceMessagesQueue || [];
-      ctx.state.voiceMessagesQueue.push(ctx);
-
-      // если обработчик сообщений уже работает, не запускаем еще один
-      if (ctx.state.processingVoiceMessages) return;
-
-      // обработка голосовых сообщений в очереди
-      (async () => {
-        ctx.state.processingVoiceMessages = true;
-
-        while (ctx.state.voiceMessagesQueue.length > 0) {
-          const nextCtx = ctx.state.voiceMessagesQueue.shift();
-          console.log("Startttt")
-          await processAudioMessage(nextCtx, true);
-        }
-
-        ctx.state.processingVoiceMessages = false;
-      })();
+      await processAudioMessage(ctx, true);
     }
   } catch (err) {
     ctx.reply("Произошла ошибка при обработкой аудио")
@@ -403,7 +203,7 @@ bot.on("audio", async (ctx) => {
 bot.launch();
 
 // Restart msg
-sendMessageToAllUsers("Бот был перезапущен, все запросы сброшенны\nВведите /start для начала работы", bot)
+sendMessageToAllUsers("Бот был перезапущен, все запросы в очереди сброшенны\nВведите /start для начала работы", bot)
 // sendMessageToAllUsers("Бот был обновлен, все подробности в информационном канале https://t.me/mister_parodist_info", bot)
 // sendMessageToAllUsers("Бот временно не работает, тех.работы", bot)
 
