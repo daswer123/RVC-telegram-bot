@@ -8,6 +8,7 @@ import { registerSettingsBotActions } from "./settings/botActions.js";
 import { registerCharacterBotActions } from "./characters/botActions.js";
 import { registerPresetBotActions } from "./presets/botActions.js";
 import { registerAiCoverSettingsBotActions } from "./aicoverSettings/botActions.js";
+import { registerSeparateBotActions } from "./separate/botActions.js";
 
 export function registerBotActions(bot) {
   try {
@@ -19,6 +20,7 @@ export function registerBotActions(bot) {
     registerAiCoverSettingsBotActions(bot)
     registerCharacterBotActions(bot)
     registerPresetBotActions(bot)
+    registerSeparateBotActions(bot)
 
     // Показать главное меню
     bot.action("menu", async (ctx) => {
@@ -51,14 +53,6 @@ export function registerBotActions(bot) {
       ]))
     })
 
-
-    bot.action("separate", async (ctx) => {
-      try {
-        // Перед сохранением пресета, спросим у пользователя имя для пресета
-        ctx.reply('Дополнительные настройки вы можете найти во вкладке, настройки AI кавера\n\nКиньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
-        ctx.session.waitForSeparate = true
-      } catch (e) { console.log(e) }
-    })
   } catch (err) {
     console.log(err)
   }

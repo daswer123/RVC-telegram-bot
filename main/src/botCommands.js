@@ -142,7 +142,8 @@ export function registerBotCommands(bot) {
       try {
         // Перед сохранением пресета, спросим у пользователя имя для пресета
         ctx.reply('Киньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
-        ctx.session.waitForSeparate = true
+        ctx.session.waitForSeparate = "true"
+        ctx.reply(ctx.session.waitForSeparate)
       } catch (e) { console.log(e) }
     })
 

@@ -12,7 +12,7 @@ import { setBotCommands, registerBotCommands } from "./botCommands.js";
 import { processAudioMessage, is_youtube_url, separateAudioBot, printCurrentTime, processVideo, processAiCover, checkForBan, createSessionFolder } from "./botFunction.js";
 import { registerBotActions } from "./botActions.js";
 
-import { handlePredlog, handleYoutubeCover, textHandler, separateHanlder, handleMIddleware, handleTestVoices } from "./handlers.js";
+import { handlePredlog, handleYoutubeCover, textHandler, handleTestVoices, handleMIddleware } from "./handlers.js";
 import { sendMessageToAllUsers } from "./admin/botFunctions.js";
 import { adminHandler } from "./admin/handler.js";
 import { effectHanlder } from "./effects/handler.js";
@@ -22,25 +22,76 @@ import { createModelHanlder, handleCreateModelVoice } from "./createModel/handle
 import { showMenu } from "./menus/mainMenu.js";
 import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
-import { clearOperationsDatabase, getSessionFromDatabase, saveUserToDatabase } from "./server/db.js";
+import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
+import { separateV1Hanlder } from "./separate/handler.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 export const bot = new Telegraf(config.get("TELEGRAM_TOKEN"), { handlerTimeout: 900_000 });
 bot.use(session());
+
+setBotCommands(bot);
+
 process.setMaxListeners(0);
 
 clearOperationsDatabase()
 
-setBotCommands(bot);
+
+bot.use(async (ctx, next) => {
+  // Попытка получить сессию из базы данных
+  try {
+    handleMIddleware(ctx, next)
+  } catch (err) {
+    console.log(err)
+  }
+});
 registerBotActions(bot)
 registerBotCommands(bot)
 
 bot.use(async (ctx, next) => {
   // Попытка получить сессию из базы данных
   try {
-    handleMIddleware(ctx, next)
+    // Проверка наличия локальной сессии
+    if (!ctx.session || Object.keys(ctx.session).length === 0) {
+      // Если локальной сессии нет, попытка получить сессию из базы данных
+      const session = await getSessionFromDatabase(ctx.from.id);
+
+      if (session) {
+        // Если есть сессия в базе данных, используем её
+        ctx.session = session;
+        console.log("Загрузка сессия")
+      }
+      else {
+        // Если сессии нигде нет, создаем новую
+        ctx.session = { ...INITIAL_SESSION };
+        console.log("Создана новая сессия")
+      }
+    }
+
+    if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
+      ctx.session = { ...ctx.session.loadConfig };
+
+      // очистка объекта loadConfig после присвоения сессии
+      ctx.session.loadConfig = {};
+      await saveSessionToDatabase(ctx.from.id, ctx.session);
+    }
+
+    // Проверка наличия пользователя в базе данных
+    if (!ctx.session.inDatabase) {
+      const user = await getUserFromDatabase(ctx.from.id);
+      if (!user) {
+        // Если пользователя нет в базе данных, добавляем его и присваиваем статус 'default'
+        await saveUserToDatabase(ctx.from.id, ctx.from.username, "default");
+      }
+      // Помечаем, что пользователь теперь в базе данных
+      ctx.session.inDatabase = true;
+    }
+
+    await next(); // Обработка сообщения ботом
+
+    // Сохранение сессии в базу данных после ответа бота
+    await saveSessionToDatabase(ctx.from.id, ctx.session);
   } catch (err) {
     console.log(err)
   }
@@ -93,7 +144,7 @@ bot.on(message("text"), async (ctx) => {
       adminHandler(ctx, bot),
       effectHanlder(ctx),
       createModelHanlder(ctx),
-      separateHanlder(ctx),
+      separateV1Hanlder(ctx),
       handleSettings(ctx),
       ctx.session.waitForPredlog ? handlePredlog(ctx) : Promise.resolve(false),
       ctx.session.waitForPresetSave ? handlePresetSave(ctx) : Promise.resolve(false),
@@ -106,6 +157,7 @@ bot.on(message("text"), async (ctx) => {
         handleYoutubeCover(ctx)
         return
       }
+
       createSessionFolder(ctx);
       textHandler(ctx);
     }
@@ -143,7 +195,7 @@ bot.on("audio", async (ctx) => {
     handleCreateModelVoice(ctx)
 
     if (ctx.session.waitForSeparate) {
-      await separateAudioBot(nextCtx, sessionPath);
+      await separateAudioBot(ctx, sessionPath)
       return
     }
 

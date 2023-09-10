@@ -7,32 +7,6 @@ import path from "path";
 import axios from "axios";
 import { getBannedUsersFromDB, getUserFromDatabase, getUserOperationsCountFromDatabase, saveSuggestiontoDataBase } from "./server/db.js";
 
-export class Semaphore {
-  constructor(count) {
-    this.count = count;
-    this.waiting = [];
-  }
-
-  acquire() {
-    return new Promise((resolve) => {
-      if (this.count > 0) {
-        this.count--;
-        resolve();
-      } else {
-        this.waiting.push(resolve);
-      }
-    });
-  }
-
-  release() {
-    if (this.waiting.length > 0) {
-      const nextInLine = this.waiting.shift();
-      nextInLine();
-    } else {
-      this.count++;
-    }
-  }
-}
 
 export async function tranformAudioServer(ctx, sessionPath, audioPath = "", setMp3 = false, ctxx = "") {
   try {
@@ -49,18 +23,6 @@ export async function tranformAudioServer(ctx, sessionPath, audioPath = "", setM
   } catch (error) {
     console.log('Error transforming audio:', error.message);
   }
-}
-
-
-
-export function getRandomMaleVoice(voices) {
-  const index = Math.floor(Math.random() * MALE_VOICES.length);
-  return MALE_VOICES[index].id;
-}
-
-export function getRandomFemaleVoice(voices) {
-  const index = Math.floor(Math.random() * FEMALE_VOICES.length);
-  return FEMALE_VOICES[index].id;
 }
 
 

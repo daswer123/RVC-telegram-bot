@@ -117,6 +117,7 @@ export function clearOperationsDatabase() {
 }
 
 export function getSessionFromDatabase(userId) {
+
     userId = Math.floor(userId);
     const row = db.prepare('SELECT session FROM sessions WHERE id = ?').get(userId);
     return row ? JSON.parse(row.session) : null;
