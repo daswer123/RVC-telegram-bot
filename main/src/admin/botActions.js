@@ -1,6 +1,6 @@
-import { countUsersAndModels, createLogMessages, getLogs, getRecentLogs, getUserIds, getUserInfo, sendMessageToUser } from "./botFunctions.js";
+import { countUsersAndModels, createLogMessages, getLogs, getRecentLogs, getUserIds, getUserInfo, sendMessageToAllUsers, sendMessageToUser } from "./botFunctions.js";
 import { Markup } from "telegraf";
-import { getTrainModelsFromDatabase, removeTrainModelFromDatabase } from "../server/db.js";
+import { clearOperationsDatabase, deleteOperationFromDatabase, getTrainModelsFromDatabase, removeTrainModelFromDatabase } from "../server/db.js";
 import { showAdminMenu } from "../menus/adminMenu.js";
 
 export function registerAdminBotActions(bot) {
@@ -109,7 +109,17 @@ export function registerAdminBotActions(bot) {
         }
     });
 
+    bot.action("admin_clear_operations", async (ctx) => {
+        try {
+            clearOperationsDatabase()
+            ctx.reply("Операции удаленны")
+            sendMessageToAllUsers("Все операции были удаленны, если вы ждете результата, то попробуйте снова")
+            showAdminMenu(ctx)
+        } catch (err) {
+            console.log(err)
+        }
 
+    })
 
 
     bot.action("admin_make_privat_model", async (ctx) => {
@@ -135,6 +145,10 @@ export function registerAdminBotActions(bot) {
         ctx.session.waitForAdminGive = true
         ctx.reply("Введите ник пользователя или ID что бы дать Админ доступ")
     })
+
+
+
+
 
 
 }

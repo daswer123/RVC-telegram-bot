@@ -9,7 +9,7 @@ export const showMenu = async (ctx) => {
             [Markup.button.callback(`Выбрать персонажа`, "characters"), Markup.button.callback(`Показать текущие настройки`, "current_settings")],
             [Markup.button.callback(`Сделать AI кавер`, "cover"), Markup.button.callback(`Разделить аудио`, "separate_menu")],
             [Markup.button.callback("Настройки голоса", "settings"), Markup.button.callback(`Настройка AI Кавера`, "aisettings")],
-            [Markup.button.callback("Добавить эффекты к голосу", "effects_settings")],
+            [Markup.button.callback("Меню эффектов", "effects_settings")],
             [Markup.button.callback("Меню создания голосовых моделей", "show_create_voice_menu")],
             [Markup.button.callback(`Сохранить настройки`, "save_preset"), Markup.button.callback(`Загрузить настройки`, "load_preset")],
             [Markup.button.callback(`Предложения по улучшению бота`, "make_predlog"), Markup.button.callback(`Поддержать автора`, "support")],

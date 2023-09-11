@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
+import { INITIAL_SESSION } from "./variables.js";
+
 import { createVoice, downloadFromYoutube, logUserSession, slowDownAudioYa } from "./functions.js";
 import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url, checkForLimits } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";

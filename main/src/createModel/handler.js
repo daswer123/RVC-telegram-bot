@@ -1,4 +1,5 @@
 import { Markup } from "telegraf";
+import fs from "fs"
 
 export async function createModelHanlder(ctx) {
     try {

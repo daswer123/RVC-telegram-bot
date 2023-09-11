@@ -5,7 +5,7 @@ import axios from "axios";
 import path from "path"
 import fs from 'fs';
 import fspr from "fs/promises"
-import { compressMp3, compressMp3Same, downloadFile } from "../functions.js";
+import { compressMp3, compressMp3Same, downloadFile, logUserSession } from "../functions.js";
 
 export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
     try {

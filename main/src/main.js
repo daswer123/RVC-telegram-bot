@@ -89,6 +89,16 @@ bot.use(async (ctx, next) => {
       ctx.session.inDatabase = true;
     }
 
+    // Если количество ключей в локальной сессии и инициализированной сессии отличается
+    // или если какое-либо значение в сессии `undefined`
+    for (let key in INITIAL_SESSION) {
+      if (!(key in ctx.session) || ctx.session[key] === undefined) {
+        ctx.session[key] = INITIAL_SESSION[key];
+      }
+    }
+    // console.log("Сессия обновлена с новыми ключами");
+    await saveSessionToDatabase(ctx.from.id, ctx.session);
+
     await next(); // Обработка сообщения ботом
 
     // Сохранение сессии в базу данных после ответа бота

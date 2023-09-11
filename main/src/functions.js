@@ -340,6 +340,96 @@ export const improveAudio = async (ctx, sessionPath, filename) => {
 
 }
 
+export const improveAudiov2 = async (ctx, sessionPath, filename) => {
+  try {
+    let mp3Path = `${sessionPath}/${filename}`;
+
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        '--input_file', mp3Path,
+        '--output_file', `${sessionPath}/audio_out_improve.mp3`,
+        '--compressorThreshold', ctx.session.compressorThreshold,
+        '--compressorRatio', ctx.session.compressorRatio,
+        '--highpassCutoff', ctx.session.highpassCutoff,
+        '--lowpassCutoff', ctx.session.lowpassCutoff,
+        '--noiseGateThreshold', ctx.session.noiseGateThreshold,
+        '--chorusRate', ctx.session.chorusRate,
+        '--chorusDepth', ctx.session.chorusDepth,
+        '--reverbRoomSize', ctx.session.reverbRoomSize,
+        '--reverbWetLevel', ctx.session.reverbWetLevel,
+        '--delayTime', ctx.session.delayTime,
+        '--delayMix', ctx.session.delayMix,
+        '--pitchShift', ctx.session.pitchShift,
+        '--chorusOn', String(ctx.session.chorusOn),
+        '--reverbOn', String(ctx.session.reverbOn),
+        '--delayOn', String(ctx.session.delayOn),
+        '--pitchShiftOn', String(ctx.session.pitchShiftOn),
+        '--noiseGateOn', String(ctx.session.noiseGateOn),
+        '--highPassOn', String(false),
+        '--lowPassOn', String(false),
+        '--compressorOn', String(ctx.session.compressorOn),
+        '--noiseGateOn', String(false)
+      ]
+    };
+
+    const messages = await PythonShell.run('effectsv2.py', optionss)
+
+
+    return messages
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+export const improveAudiov2Pre = async (ctx, sessionPath, filename) => {
+  try {
+    let mp3Path = `${sessionPath}/${filename}`;
+
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        '--input_file', mp3Path,
+        '--output_file', `${sessionPath}/audio_out_improve.mp3`,
+        '--compressorThreshold', ctx.session.compressorThreshold,
+        '--compressorRatio', ctx.session.compressorRatio,
+        '--highpassCutoff', ctx.session.highpassCutoff,
+        '--lowpassCutoff', ctx.session.lowpassCutoff,
+        '--noiseGateThreshold', ctx.session.noiseGateThreshold,
+        '--chorusRate', ctx.session.chorusRate,
+        '--chorusDepth', ctx.session.chorusDepth,
+        '--reverbRoomSize', ctx.session.reverbRoomSize,
+        '--reverbWetLevel', ctx.session.reverbWetLevel,
+        '--delayTime', ctx.session.delayTime,
+        '--delayMix', ctx.session.delayMix,
+        '--pitchShift', ctx.session.pitchShift,
+        '--chorusOn', String(false),
+        '--reverbOn', String(false),
+        '--delayOn', String(false),
+        '--pitchShiftOn', String(false),
+        '--noiseGateOn', String(ctx.session.noiseGateOn),
+        '--highPassOn', String(ctx.session.highPassOn),
+        '--lowPassOn', String(ctx.session.lowPassOn),
+        '--compressorOn', String(ctx.session.compressorOn),
+        '--noiseGateOn', String(false)
+      ]
+    };
+
+    const messages = await PythonShell.run('effectsv2.py', optionss)
+
+
+    return messages
+  } catch (err) {
+    console.log(err)
+  }
+}
+
 export const phoneCallEffects = async (ctx, sessionPath, filename) => {
   let mp3Path = `${sessionPath}/${filename}`;
 
@@ -643,6 +733,8 @@ export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
 
   vocalString = "Вокал"
 
+  let vocalFileName = "vocal.mp3"
+
   await separateAudiov2(sessionPath, "audio.wav");
 
   await compressMp3Same(instrumentalPath, 2)
@@ -663,31 +755,39 @@ export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
 
   if (ctx.session.audioProcessPower === "echo") {
     vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_echo.mp3");
+    vocalFileName = "vocal_de_echo.mp3"
   }
 
   if (ctx.session.audioProcessPower === "backvocal" || ctx.session.audioProcessPower === "both") {
     vocalPathDeEcho = path.join(fullSessionPath, "vocal_de_back.mp3");
+    vocalFileName = "vocal_de_back.mp3"
   }
 
   if (!vocalPathDeEcho) vocalPathDeEcho = vocalPath
 
+  if (ctx.session.lowPassOn || ctx.session.highPassOn || ctx.session.compressorOn || ctx.session.noiseGateOn) {
+    await improveAudiov2Pre(ctx, sessionPath, vocalFileName)
+    vocalPathDeEcho = `${sessionPath}/audio_out_improve.mp3`
+  }
+
   await transformAudio(ctx, sessionPath, vocalPathDeEcho, true);
 
   if (ctx.session.autoTune) {
-    await autotuneAudio(ctx, sessionPath, "audio_out.mp3")
+    await autotuneAudio(ctx, sessionPath, vocalFileName)
     sessionOutputPath = path.join(fullSessionPath, "autotune_vocal.mp3");
   }
 
-  if (ctx.session.reverbOn || ctx.session.echoOn) {
+  if (ctx.session.chorusOn || ctx.session.reverbOn || ctx.session.delayOn || ctx.session.pitchShiftOn || ctx.session.compressorOn) {
     sessionOutputPath = path.join(fullSessionPath, "autotune_vocal.mp3");
+    ctx.session.voice_volume += 0.5
 
     // Проверьте, существует ли файл
     if (!fs.existsSync(sessionOutputPath)) {
       // Если файла не существует, то примените audio_out.mp3
-      await improveAudio(ctx, sessionPath, "audio_out.mp3");
+      await improveAudiov2(ctx, sessionPath, "audio_out_cut.mp3");
       sessionOutputPath = path.join(sessionPath, "audio_out_improve.mp3");
     } else {
-      await improveAudio(ctx, sessionPath, "autotune_vocal.mp3");
+      await improveAudiov2(ctx, sessionPath, "autotune_vocal.mp3");
       sessionOutputPath = path.join(sessionPath, "audio_out_improve.mp3");
     }
   }

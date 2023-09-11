@@ -1,5 +1,5 @@
 import { Markup } from "telegraf";
-import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, compressMp3, logUserSession, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects, handleAICover, handleSeparateAudio } from "./functions.js";
+import { downloadFile, downloadFromYoutube, transformAudio, separateAudio, mergeAudioFilesToMp3, splitVideoAndAudio, mergeAudioAndVideo, compressMp3, logUserSession, improveAudio, autotuneAudio, convertToOgg, phoneCallEffects, handleAICover, handleSeparateAudio, improveAudiov2, improveAudiov2Pre } from "./functions.js";
 import { INITIAL_SESSION, handleAICoverMaxQueue, separateAudioMaxQueue, transfromAudioMaxQueue } from "./variables.js";
 import config from "config";
 import fs from "fs";
@@ -287,25 +287,25 @@ async function handleAudio(ctx, sessionPath, audioPath = '', isAudio = false, me
     ctx.reply("Запрос на преобразование голоса поставлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos");
   }
 
+
+  if (ctx.session.lowPassOn || ctx.session.highPassOn || ctx.session.compressorOn || ctx.session.noiseGateOn) {
+    await improveAudiov2Pre(ctx, sessionPath, "audio.ogg")
+    audioPath = `${sessionPath}/audio_out_improve.mp3`
+  }
   // console.log(ctx, "popa", audioPath)
   await tranformAudioServer(ctx, sessionPath, audioPath, true)
   await logUserSession(ctx, "transformAudio", logInfo)
 
   await ctx.sendChatAction("upload_audio");
 
-  if (ctx.session.phoneEffect) {
-    await phoneCallEffects(ctx, sessionPath, "audio_out_cut.mp3");
-  }
 
-  if (ctx.session.reverbOn || ctx.session.echoOn || ctx.session.phoneEffect) {
-    if (!ctx.session.phoneEffect) {
-      await improveAudio(ctx, sessionPath, "audio_out_cut.mp3");
-    }
-
+  if (ctx.session.chorusOn || ctx.session.reverbOn || ctx.session.delayOn || ctx.session.pitchShiftOn || ctx.session.compressorOn) {
+    await improveAudiov2(ctx, sessionPath, "audio_out_cut.mp3");
     audioSource = `${sessionPath}/audio_out_improve.mp3`;
   } else {
     audioSource = `${sessionPath}/audio_out_cut.mp3`;
   }
+
 
   if (ctx.session.voiceOrAudioOut === "audio") {
     await ctx.sendAudio({
