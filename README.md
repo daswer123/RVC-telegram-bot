@@ -26,12 +26,12 @@
 https://github.com/daswer123/tg_rvc_bot/assets/22278673/9167b08e-87f5-40ce-b569-3a446b1ecb55
 
 ## TODO
-- [ ] Отрефакторить код
-- [ ] Разбить код на модули
-- [ ] Улучшить UI
-- [ ] Отделить серверную часть и бота
-- [ ] Добавить систему очередей
+- [x] Разбить код на модули
+- [x]Отделить серверную часть и бота
+- [x] Добавить систему очередей
 - [ ] Добавить систему подписки
+- [ ] Отрефакторить код ( частично )
+- [ ] Улучшить UI
 
 ## Гайд по установке:
 1) Убедитесь что у вас установленны: [Python 3.10.x](https://www.python.org/downloads/release/python-3109/), [Node JS 18+](https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi), [Microsoft builders Tools 2019](https://visualstudio.microsoft.com/ru/visual-cpp-build-tools/) , [ffmpeg](https://ffmpeg.org/), [CUDA 11.7](https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_516.01_windows.exe) или [CUDA 11.8](https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_522.06_windows.exe)
