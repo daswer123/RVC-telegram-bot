@@ -1,293 +1,254 @@
-import { Markup} from "telegraf";
+import { Markup } from "telegraf";
 import config from "config";
 import fs from "fs";
 import path from "path";
 import ffmpeg from 'fluent-ffmpeg';
 
-import { createVoice, logUserSession, slowDownAudioYa } from "./functions.js";
-import { processAudioMessage,  process_youtube_audio, printCurrentTime, saveSuggestion } from "./botFunction.js";
+import { INITIAL_SESSION } from "./variables.js";
+
+import { createVoice, downloadFromYoutube, logUserSession, slowDownAudioYa } from "./functions.js";
+import { processAudioMessage, process_youtube_audio, printCurrentTime, saveSuggestion, is_youtube_url, checkForLimits } from "./botFunction.js";
 import { generateSpeechYA } from "./yandexTTS.js";
+import { handleAICoverMaxQueue, transfromAudioMaxQueue } from "./variables.js";
+import { getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
+import { separateAudioBot } from "./separate/botFunctios.js";
+
+// import { registerAdminBotActions } from "./admin/botActions.js";
+// import { registerCreateMenuBotActions } from "./createModel/botActions.js";
+// import { showCurrentSettings, showMenu } from "./menus/mainMenu.js";
+// import { showSettings } from "./menus/settingsMenu.js";
+// import { showAICoverSettings } from "./menus/aicoverMenu.js";
+// import { showEffectsSettings } from "./menus/effectsMenu.js";
 
 
-// Settings 
-const settingsConfig = {
-    settingPith: {
-      name: "Pith",
-      minValue: -24,
-      maxValue: 24,
-    },
-    settingMangioCrepeHop: {
-      name: "Mangio Crepe Hop",
-      minValue: 64,
-      maxValue: 250,
-    },
-    settingFeatureRatio: {
-      name: "Feature Ratio",
-      minValue: 0,
-      maxValue: 1,
-    },
-    settingProtectVoiceless: {
-      name: "Protect Voiceless",
-      minValue: 0,
-      maxValue: 0.5,
-    },
-    settingVocalVolume: {
-      name: "Voice volume",
-      minValue: 0,
-      maxValue: 3,
-    },
-    settingInstrumentVolume: {
-      name: "Instrumnet volume",
-      minValue: 0,
-      maxValue: 3,
-    },
-    settingVoiceSpeed: {
-      name: "Voice Speed",
-      minValue: 0.2,
-      maxValue: 1.5,
-    },
-  };
-  
 
-  // Handlers
+// Handlers
 export const handlePredlog = (ctx) => {
-    saveSuggestion(ctx.from.username, ctx.message.text);
-  
-    ctx.reply(`Предложение по улучшению было успешно записанно`, Markup.inlineKeyboard([
-      Markup.button.callback('Меню', 'menu')
-    ]));
-    ctx.session.waitForPredlog = false;
-    return true;
+  saveSuggestion(ctx.from.username, ctx.message.text);
+
+  ctx.reply(`Предложение по улучшению было успешно записанно`, Markup.inlineKeyboard([
+    Markup.button.callback('Меню', 'menu')
+  ]));
+  ctx.session.waitForPredlog = false;
+  return true;
+}
+
+export const handleYoutubeCover = (ctx) => {
+
+  if (checkForLimits(ctx, "handleAICover", handleAICoverMaxQueue)) return
+
+  const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+  const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+  const username = ctx.from.username; // получаем ник пользователя
+  const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+  // Если пользователь отправил YouTube URL и ожидается обложка
+  const youtube_url = ctx.message.text;
+
+  ctx.reply("Скачивание аудио с YouTube...");
+  process_youtube_audio(ctx, sessionPath, youtube_url);
+
+  ctx.session.waitingForCover = false;
+  return true;
+}
+
+async function createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath) {
+  const response = await createVoice(ctx.session.voiceActor, ctx.message.text, messageId);
+  // await logUserSession(ctx, "tts", ctx.session.voiceActor)
+  // Поиск файла с нужным названием
+  const sieroPath = path.join(config.get('SIERO_AUDIO_PATH'), String(messageId));
+  const files = fs.readdirSync(sieroPath);
+  const foundFile = files.find((file) => /\.wav$/.test(file));
+
+  let newFilePath, slowedFilePath;
+
+  if (foundFile) {
+    // Обработка и перемещение файла
+    const paths = await processAndMoveFile(ctx, sieroPath, foundFile, sessionPath);
+    newFilePath = paths.newFilePath;
+    slowedFilePath = paths.slowedFilePath;
   }
-  
-  export const handlePresetSave = (ctx) => {
-    ctx.session.waitForPresetSave = false;
-    const presetName = ctx.message.text;
-  
-    const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-    const sessionPath = path.join('sessions', String(uniqueId));
-    const presetsFilePath = path.join(sessionPath, 'presets.json');
-  
-    // Создаем папку для пользователя, если она еще не существует
-    if (!fs.existsSync(sessionPath)) {
-      fs.mkdirSync(sessionPath, { recursive: true });
-    }
-  
-    let presets = {};
-    // Если файл presets.json уже существует, прочитаем его
-    if (fs.existsSync(presetsFilePath)) {
-      const presetsFileContent = fs.readFileSync(presetsFilePath);
-      presets = JSON.parse(presetsFileContent);
-    }
-  
-    // Добавляем новый пресет
-    presets[presetName] = ctx.session;
-  
-    // Сохраняем обновленные пресеты обратно в файл
-    fs.writeFileSync(presetsFilePath, JSON.stringify(presets));
-  
-    // Ответ пользователю
-    ctx.reply(`Пресет "${presetName}" успешно сохранен.`, Markup.inlineKeyboard([
-      Markup.button.callback('Меню', 'menu')
-    ]));
-    return true;
+
+  logUserSession(ctx, "silero_tts", ctx.session.voiceActor)
+  return { newFilePath, slowedFilePath };
+}
+
+// Функция technicalHandler генерирует голос и обрабатывает аудиофайл
+export async function technicalHandler(ctx, { uniqueId, messageId, username, sessionPath }) {
+  if (!ctx.session.voiceActor.startsWith("yandex_")) {
+    const { newFilePath, slowedFilePath } = await createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath);
+  } else {
+    const speaker = ctx.session.voiceActor.split("_")[1];
+    await generateSpeechYA(sessionPath, "generated_speach.mp3", ctx.message.text, speaker);
+    await slowDownAudioYa(`${sessionPath}/generated_speach.mp3`, ctx.session.voice_speed);
+    logUserSession(ctx, "yandex_tts", ctx.session.voiceActor)
   }
-  
-  export const handleYoutubeCover = (ctx) => {
+
+  ctx.reply("Текст озвучен роботом, преобразование голоса поставленно в очередь, ожидайте")
+
+  await processAudioMessage(ctx, false, `${sessionPath}/generated_voice_slowed.wav`, sessionPath, "", "tts");
+
+  return true
+}
+
+export async function textHandler(ctx) {
+
+  if (checkForLimits(ctx, "transformAudio", transfromAudioMaxQueue)) return
+
+  try {
     const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
     const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
     const username = ctx.from.username; // получаем ник пользователя
     const sessionPath = `sessions/${uniqueId}/${messageId}`;
-  
-    // Если пользователь отправил YouTube URL и ожидается обложка
-    const youtube_url = ctx.message.text;
-  
-    ctx.reply("Скачивание аудио с YouTube...");
-    process_youtube_audio(ctx, sessionPath, youtube_url);
-  
-    ctx.session.waitingForCover = false;
-    return true;
-  }
-  
-  export const handleSettings = async (ctx) => {
-    const value = parseFloat(ctx.message.text);
-    let setting;
-  
-    for(const key in settingsConfig) {
-      if(ctx.session[key]) {
-        setting = settingsConfig[key];
-        break;
-      }
-    }
-  
-    if(setting && value >= setting.minValue && value <= setting.maxValue) {
-      const settingKey = setting.name.toLowerCase().replace(/ /g, "_");
-      ctx.session[settingKey] = value;
-  
-      console.log(settingKey);
-      console.log(ctx.session[settingKey]);
-  
-      Object.keys(settingsConfig).forEach(key => {
-        ctx.session[key] = false;
-      });
-  
-      if(settingKey === "voice_volume" || settingKey === "instrumnet_volume" ){
-        await ctx.reply(
-          `${setting.name} установлен на ${value}`,
-          Markup.inlineKeyboard([Markup.button.callback("Назад", "ai_settings"), Markup.button.callback("Меню", "menu")], {
-            columns: 3,
-          }).resize()
-        );
-      } else {
-      await ctx.reply(
-        `${setting.name} установлен на ${value}`,
-        Markup.inlineKeyboard([Markup.button.callback("Назад", "settings"), Markup.button.callback("Меню", "menu")], {
-          columns: 3,
-        }).resize()
-      );
-      }
-  
-      return true;
-    } else if(setting) {
-      await ctx.reply(`Пожалуйста, введите корректное значение ${setting.name} от ${setting.minValue} до ${setting.maxValue}`);
-      return true;
-    }
-  
-    return false;
-  }
 
+    // if (!ctx.session.voiceActor.startsWith("yandex_")) {
+    const { newFilePath, slowedFilePath } = await technicalHandler(ctx, { uniqueId, messageId, username, sessionPath })
 
-  async function createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath) {
-    const response = await createVoice(ctx.session.voiceActor, ctx.message.text, messageId);
-    await logUserSession(ctx,"tts",ctx.session.voiceActor)
-  
-    // Поиск файла с нужным названием
-    const sieroPath = path.join(config.get('SIERO_AUDIO_PATH'), String(messageId));
-    const files = fs.readdirSync(sieroPath);
-    const foundFile = files.find((file) => /\.wav$/.test(file));
-  
-    let newFilePath, slowedFilePath;
-  
-    if (foundFile) {
-      // Обработка и перемещение файла
-      const paths = await processAndMoveFile(ctx,sieroPath, foundFile, sessionPath);
-      newFilePath = paths.newFilePath;
-      slowedFilePath = paths.slowedFilePath;
+    if (ctx.session.mergeAudio || ctx.session.waitingForCover) {
+      ctx.session.mergeAudio = false;
+      ctx.session.waitingForCover = false;
+      await ctx.reply("Отмена операции");
+      return
+      // }
     }
-  
-    return { newFilePath, slowedFilePath };
+  } catch (err) {
+    await ctx.reply("Что-то пошло не так. Попробуйте снова")
+    console.log(err)
+    return
   }
-  
-  async function processAndMoveFile(ctx,sieroPath, foundFile, sessionPath) {
-    // Перемещение файла в папку сессии
-    const sourcePath = path.join(sieroPath, foundFile);
-    const destinationPath = path.join(sessionPath, foundFile);
-    moveFile(sourcePath, destinationPath);
-  
-    const newFileName = 'generated_voice.wav';
-    const newFilePath = path.join(path.dirname(destinationPath), newFileName);
-    fs.renameSync(destinationPath, newFilePath);
-  
-    // Замедляем аудиозапись
-    const slowedFileName = 'generated_voice_slowed.wav';
-    const slowedFilePath = path.join(path.dirname(destinationPath), slowedFileName);
-    await slowDownAudio(ctx,newFilePath, slowedFilePath);
-  
-    return { newFilePath, slowedFilePath };
-  }
-  
-  async function slowDownAudio(ctx,newFilePath, slowedFilePath) {
-    await ffmpeg(newFilePath)
-      .audioFilters(`atempo=${ctx.session.voice_speed}`)
-      .on('error', function (err) {
-        console.error(`Error occurred while slowing down the audio: ${err.message}`);
-      })
-      .on('end', function () {
-        // Удаляем исходный файл, если замедленный файл успешно создан
-        fs.unlinkSync(newFilePath);
-      })
-      .save(slowedFilePath);
-  }
-  
-  function moveFile(sourcePath, destinationPath) {
-    // Проверка существования исходного пути
-    if (!fs.existsSync(sourcePath)) {
-      console.error(`Source path does not exist: ${sourcePath}`);
-      return;
-    }
-  
-    // Создание папки назначения, если она не существует
-    const destinationDir = path.dirname(destinationPath);
-    if (!fs.existsSync(destinationDir)) {
-      fs.mkdirSync(destinationDir, { recursive: true });
-    }
-  
-    fs.renameSync(sourcePath, destinationPath);
-  }
-  
-  function writeUsernameFile(sessionPath, username, uniqueId, messageId) {
-    try {
-      // создаем текстовый файл с именем пользователя
-      const filename = `${username}.txt`;
-      const filepath = path.join(sessionPath, filename);
-      fs.writeFileSync(filepath, `User: ${username}\nUnique ID: ${uniqueId}\nMessage ID: ${messageId}`);
-    } catch (err) {
-      console.log(err)
-    }
-  }
-  
+}
 
-  export async function textHandler(ctx) {
-    try {
-        const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-        const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
-        const username = ctx.from.username; // получаем ник пользователя
-        const sessionPath = `sessions/${uniqueId}/${messageId}`;
-
-        if(!ctx.session.voiceActor.startsWith("yandex_")){
-          const { newFilePath, slowedFilePath } = await createVoiceAndProcess(ctx, uniqueId, messageId, sessionPath);
-          writeUsernameFile(sessionPath, username, uniqueId, messageId);
-      } else {
-          const speaker = ctx.session.voiceActor.split("_")[1];
-          await generateSpeechYA(sessionPath,"generated_speach.mp3",ctx.message.text,speaker);
-          await slowDownAudioYa(`${sessionPath}/generated_speach.mp3`,ctx.session.voice_speed);
-      }
-
-        const slowedFilePath = `${sessionPath}/generated_voice_slowed.wav`
-        
-        await ctx.reply("Текст озвучен, преобразование голоса");
-    
-        // добавляем голосовое сообщение в очередь
-        ctx.state.voiceMessagesQueue = ctx.state.voiceMessagesQueue || [];
-        ctx.state.voiceMessagesQueue.push(ctx);
-    
-        // если обработчик сообщений уже работает, не запускаем еще один
-        if (!ctx.state.processingVoiceMessages) {
-          processVoiceMessagesQueue(ctx, slowedFilePath, sessionPath);
-        }
-    
-        if (ctx.session.mergeAudio || ctx.session.waitingForCover) {
-          ctx.session.mergeAudio = false;
-          ctx.session.waitingForCover = false;
-          await ctx.reply("Отмена операции");
-          return
-        }
-    
-      } catch (err) {
-        await ctx.reply("Что-то пошло не так. Попробуйте снова")
-        console.log(err)
+export async function separateHanlder(ctx) {
+  try {
+    if (ctx.session.waitForSeparate) {
+      if (!is_youtube_url(ctx.message.text)) {
+        ctx.reply("Неправильная ссылка на ютуб, введите команду /separate и попробуйте еще раз")
+        ctx.session.waitForSeparate = false
         return
       }
+      const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+      const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+      const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+      await downloadFromYoutube(ctx.message.text, sessionPath);
+
+      await separateAudioBot(ctx, sessionPath, true)
+      ctx.session.waitForSeparate = false
+      return
+
     }
-    
-    async function processVoiceMessagesQueue(ctx, slowedFilePath, sessionPath) {
-      ctx.state.processingVoiceMessages = true;
-    
-      while (ctx.state.voiceMessagesQueue.length > 0) {
-        const nextCtx = ctx.state.voiceMessagesQueue.shift();
-        await processAudioMessage(nextCtx, false, slowedFilePath, sessionPath);
-        printCurrentTime()
-      }
-    
-      ctx.state.processingVoiceMessages = false;
+
+    return Promise.resolve(false)
+  } catch (err) { console.log(err) }
+}
+
+
+async function processVoiceMessagesQueue(ctx, slowedFilePath, sessionPath) {
+  ctx.state.processingVoiceMessages = true;
+
+  while (ctx.state.voiceMessagesQueue.length > 0) {
+    const nextCtx = ctx.state.voiceMessagesQueue.shift();
+    await processAudioMessage(nextCtx, false, slowedFilePath, sessionPath);
+    printCurrentTime()
   }
+
+  ctx.state.processingVoiceMessages = false;
+}
+
+
+
+async function processAndMoveFile(ctx, sieroPath, foundFile, sessionPath) {
+  // Перемещение файла в папку сессии
+  const sourcePath = path.join(sieroPath, foundFile);
+  const destinationPath = path.join(sessionPath, foundFile);
+  moveFile(sourcePath, destinationPath);
+
+  const newFileName = 'generated_voice.wav';
+  const newFilePath = path.join(path.dirname(destinationPath), newFileName);
+  fs.renameSync(destinationPath, newFilePath);
+
+  // Замедляем аудиозапись
+  const slowedFileName = 'generated_voice_slowed.wav';
+  const slowedFilePath = path.join(path.dirname(destinationPath), slowedFileName);
+  await slowDownAudio(ctx, newFilePath, slowedFilePath);
+
+  return { newFilePath, slowedFilePath };
+}
+
+async function slowDownAudio(ctx, newFilePath, slowedFilePath) {
+  await ffmpeg(newFilePath)
+    .audioFilters(`atempo=${ctx.session.voice_speed}`)
+    .on('error', function (err) {
+      console.error(`Error occurred while slowing down the audio: ${err.message}`);
+    })
+    .on('end', function () {
+      // Удаляем исходный файл, если замедленный файл успешно создан
+      fs.unlinkSync(newFilePath);
+    })
+    .save(slowedFilePath);
+}
+
+function moveFile(sourcePath, destinationPath) {
+  // Проверка существования исходного пути
+  if (!fs.existsSync(sourcePath)) {
+    console.error(`Source path does not exist: ${sourcePath}`);
+    return;
+  }
+
+  // Создание папки назначения, если она не существует
+  const destinationDir = path.dirname(destinationPath);
+  if (!fs.existsSync(destinationDir)) {
+    fs.mkdirSync(destinationDir, { recursive: true });
+  }
+
+  fs.renameSync(sourcePath, destinationPath);
+}
+
+export async function handleMIddleware(ctx, next) {
+  const session = await getSessionFromDatabase(ctx.from.id);
+
+  if (session) {
+    ctx.session = session;
+  } else {
+    ctx.session = { ...INITIAL_SESSION };
+  }
+
+  // Проверка наличия пользователя в базе данных
+  if (!ctx.session.inDatabase) {
+    const user = await getUserFromDatabase(ctx.from.id);
+    if (!user) {
+      // Если пользователя нет в базе данных, добавляем его и присваиваем статус 'default'
+      await saveUserToDatabase(ctx.from.id, ctx.from.username, "default");
+    }
+    // Помечаем, что пользователь теперь в базе данных
+    ctx.session.inDatabase = true;
+  }
+
+  try {
+    if (ctx.session.loadConfig && Object.keys(ctx.session.loadConfig).length > 0) {
+      ctx.session = { ...ctx.session.loadConfig };
+
+      // очистка объекта loadConfig после присвоения сессии
+      ctx.session.loadConfig = {};
+    }
+  } catch (err) {
+    console.log(err, "err")
+  }
+
+  await next(); // Обработка сообщения ботом
+
+  // Сохранение сессии в базу данных после ответа бота
+  await saveSessionToDatabase(ctx.from.id, ctx.session);
+}
+
+export async function handleTestVoices(ctx) {
+  if (ctx.session.testVoice) {
+    for (let i = 0; i < 12; i++) {
+      ctx.session.pith = i;
+      await ctx.reply("Текущая высота тона: " + i)
+      await processAudioMessage(ctx)
+      printCurrentTime()
+    }
+    ctx.session.testVoice = false
+  }
+}
