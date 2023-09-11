@@ -17,6 +17,7 @@
 Бот успешно прошел испытание на 100-200 активных пользователей в день.
 
 **Новая версия в процесе сборки, на данный момент есть только старая портативная версия**
+
 **Существует портативная версия бота, с уже установленными библиотеками [Portable TG RVC Bot](https://huggingface.co/Daswer123/RVC_TG_BOT/tree/main)**
 Как только скачаете портативную версию, запустите update_path.bat и начните с пунка 5 в [Гайде по установке](https://github.com/daswer123/tg_rvc_bot/edit/main/README.md#гайд-по-установке)
 В качестве бонуса в портативной версии, уже установленна модель Ливанова и вы можете сразу создать конфиг персонажей и протестировать бота
@@ -59,4 +60,5 @@ https://github.com/daswer123/tg_rvc_bot/assets/22278673/9167b08e-87f5-40ce-b569-
 2) [python-audio-separator](https://github.com/karaokenerds/python-audio-separator) - Разделение аудио на вокал и инструментал с помощью MDX архетектуры
 3) [Silero TTS](https://github.com/snakers4/silero-models) - TTS на русском языке
 4) [doremi](https://github.com/jpmchargue/doremi) - Библеотека для автотюна
+5) [pedalboard](https://github.com/spotify/pedalboard) - Библеотека эффектов
 
