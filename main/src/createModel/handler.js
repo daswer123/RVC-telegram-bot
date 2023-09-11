@@ -1,5 +1,6 @@
 import { Markup } from "telegraf";
 import fs from "fs"
+import { downloadFile } from "../functions.js";
 
 export async function createModelHanlder(ctx) {
     try {

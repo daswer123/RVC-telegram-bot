@@ -35,7 +35,7 @@ export async function showEffectsSettings(ctx) {
       effectsStatusMessage += "\n";
     }
 
-    const mainDesc = "Меню настройки эффектов, эффекты применяются к голосовым сообщениям и к AI каверам.\n\n" + effectsStatusMessage;
+    const mainDesc = "Меню настройки эффектов, эффекты применяются к голосовым сообщениям и к AI каверам.\n\nЭффекты могут заглушить аудио\n\n" + effectsStatusMessage;
 
     const settingsMessage = [mainDesc].join("\n\n");
 

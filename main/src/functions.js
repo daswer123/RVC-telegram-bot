@@ -672,6 +672,21 @@ export async function handleSeparateAudiov2(sessionPath, filename = "audio.wav",
 
 }
 
+export async function handleSeparateAudiov3(sessionPath, filename = "audio.wav", isAudio = false) {
+  try {
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    const vocalPathh = path.join(fullSessionPath, "vocals.mp3");
+    const instrumentalPathh = path.join(fullSessionPath, "no_vocals.mp3");
+
+    await separateAudiov3(sessionPath, filename, "htdemucs_ft");
+
+    return { vocalPathh, instrumentalPathh }
+  } catch (err) {
+    console.log(err)
+  }
+
+}
+
 export async function handleSeparateAudio6Items(sessionPath, filename = "audio.wav", isAudio = false) {
   try {
     const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
@@ -698,6 +713,35 @@ export async function handleSeparateAudio6Items(sessionPath, filename = "audio.w
   }
 
 }
+
+export async function handleSeparateAudio4Items(sessionPath, filename = "audio.wav", isAudio = false) {
+  try {
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    // const vocalPathh = path.join(fullSessionPath, "vocals.mp3");
+    // const instrumentalPathh = path.join(fullSessionPath, "no_vocals.mp3");
+
+    await separateAudio4Items(sessionPath, filename, "htdemucs_ft");
+
+    const newPath = path.join(sessionPath, "ft")
+    const files = await fspr.readdir(newPath);
+
+    console.log("Сжимаем файлы")
+    for (let file of files) {
+      if (path.extname(file) === '.mp3') { // Сжимаем и отправляем только mp3 файлы
+        const filePath = path.join(newPath, file);
+        await compressMp3Same(filePath, 2)
+      }
+    }
+
+
+    return
+  } catch (err) {
+    console.log(err)
+  }
+
+}
+
+
 
 export async function handleDenoiseAudio(sessionPath, filename = "audio.wav", isAudio = false) {
   try {
@@ -934,7 +978,42 @@ export async function separateAudiov2(sessionPath, filename = "audio.wav", model
         `${sessionPath}/${filename}`,
         `${sessionPath}`,
         model_name,
-        2
+        2,
+        true
+      ]
+    };
+
+    const messages = await PythonShell.run('separatev2.py', optionss);
+
+    let sessionVocalPath, sessonInstrumentalPath;
+
+    sessionVocalPath = path.join(sessionPath, "vocal.mp3")
+    sessonInstrumentalPath = path.join(sessionPath, "instrumental.mp3")
+
+    console.log("1", sessionVocalPath, sessonInstrumentalPath, "3")
+    await renameDemucsFiles(sessionPath)
+
+    console.log("Файл успешно преобразован")
+    return { sessionVocalPath, sessonInstrumentalPath }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function separateAudiov3(sessionPath, filename = "audio.wav", model_name = "htdemucs_ft") {
+  // Acquire semaphore before doing any work
+  try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        `${sessionPath}/${filename}`,
+        `${sessionPath}`,
+        model_name,
+        2,
+        true
       ]
     };
 
@@ -967,7 +1046,34 @@ export async function separateAudio6Items(sessionPath, filename = "audio.wav", m
         `${sessionPath}/${filename}`,
         `${sessionPath}/6s`,
         model_name,
-        2
+        2,
+        false
+      ]
+    };
+
+    const messages = await PythonShell.run('separatev2.py', optionss);
+
+    console.log("Файл успешно преобразован")
+    return sessionPath
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+export async function separateAudio4Items(sessionPath, filename = "audio.wav", model_name = "htdemucs_ft") {
+  // Acquire semaphore before doing any work
+  try {
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        `${sessionPath}/${filename}`,
+        `${sessionPath}/6s`,
+        model_name,
+        2,
+        false
       ]
     };
 

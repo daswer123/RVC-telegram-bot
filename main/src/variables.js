@@ -31,6 +31,7 @@ export const INITIAL_SESSION = {
   waitForPresetSave: false,
   waitForSeparate: false,
   waitForSeparatev2: false,
+  waitForSeparatev3: false,
   waitForSeparate6Items: false,
   waitForVoice: false,
   waitForModelName: false,

@@ -3,7 +3,7 @@ import { message } from "telegraf/filters";
 import { downloadFile, handleDenoiseAudio, mergeAudioFilesToMp3 } from "./functions.js";
 import config from "config";
 import fs from "fs";
-import path from "path";
+import path, { sep } from "path";
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
@@ -23,7 +23,7 @@ import { showMenu } from "./menus/mainMenu.js";
 import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
 import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
-import { denoiseHanlder, separate6ItemsHanlder, separateV1Hanlder, separateV2Hanlder } from "./separate/handler.js";
+import { denoiseHanlder, separate4ItemsHanlder, separate6ItemsHanlder, separateV1Hanlder, separateV2Hanlder, separateV3Hanlder } from "./separate/handler.js";
 import { separateAudioBot, separateAudioBot6Items, separateAudioBotv2 } from "./separate/botFunctios.js";
 
 // Указываем путь к ffmpeg
@@ -157,6 +157,8 @@ bot.on(message("text"), async (ctx) => {
       createModelHanlder(ctx),
       separateV1Hanlder(ctx),
       separateV2Hanlder(ctx),
+      separateV3Hanlder(ctx),
+      separate4ItemsHanlder(ctx),
       separate6ItemsHanlder(ctx),
       handleSettings(ctx),
       ctx.session.waitForPredlog ? handlePredlog(ctx) : Promise.resolve(false),

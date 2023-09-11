@@ -18,11 +18,27 @@ export function registerSeparateBotActions(bot) {
         } catch (e) { console.log(e) }
     })
 
+    bot.action("separatev3", async (ctx) => {
+        try {
+            // Перед сохранением пресета, спросим у пользователя имя для пресета
+            ctx.reply('Киньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
+            ctx.session.waitForSeparatev3 = true
+        } catch (e) { console.log(e) }
+    })
+
     bot.action("separate6items", async (ctx) => {
         try {
             // Перед сохранением пресета, спросим у пользователя имя для пресета
             ctx.reply('Киньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
             ctx.session.waitForSeparate6Items = true
+        } catch (e) { console.log(e) }
+    })
+
+    bot.action("separate4items", async (ctx) => {
+        try {
+            // Перед сохранением пресета, спросим у пользователя имя для пресета
+            ctx.reply('Киньте ссылку на ютуб или загрузите аудио напрямую, что бы разделить вокал и инструментал.');
+            ctx.session.waitForSeparate4Items = true
         } catch (e) { console.log(e) }
     })
 

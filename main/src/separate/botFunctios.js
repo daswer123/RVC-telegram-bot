@@ -26,7 +26,7 @@ export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8081/separateAudio', {
+        const response = await axios.post('http://localhost:8080/separateAudio', {
             session: ctx.session,
             sessionPath: sessionPath,
             isAudio: isAudio,
@@ -97,7 +97,7 @@ export async function separateAudioBotv2(ctx, filename = "audio.wav", isAudio = 
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8081/separateAudiov2', {
+        const response = await axios.post('http://localhost:8080/separateAudiov2', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
@@ -125,6 +125,45 @@ export async function separateAudioBotv2(ctx, filename = "audio.wav", isAudio = 
     }
 }
 
+export async function separateAudioBotv3(ctx, filename = "audio.wav", isAudio = false) {
+    try {
+        if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
+
+
+        const sessionPath = createSessionFolder(ctx)
+
+        if (!isAudio) {
+            const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
+            await downloadFile(link, `${sessionPath}/audio.wav`);
+        }
+
+        await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
+
+        const response = await axios.post('http://localhost:8080/separateAudiov3', {
+            sessionPath: sessionPath,
+            filename: filename,
+            isAudio: isAudio,
+            userId: ctx.from.id
+        });
+
+        await renameDemucsFiles(sessionPath)
+
+        const vocalPath = `${sessionPath}/vocal.mp3`;
+        const instrumentalPath = `${sessionPath}/instrumental.mp3`
+
+        await compressMp3Same(vocalPath, 2)
+        await compressMp3Same(instrumentalPath, 2)
+
+        // const { vocalPath, instrumentalPath } = response.data;
+
+        ctx.reply("Вокал и инструментал")
+        await ctx.sendAudio({ source: instrumentalPath });
+        await ctx.sendAudio({ source: vocalPath });
+    } catch (err) {
+        console.log(err)
+    }
+}
+
 export async function separateAudioBot6Items(ctx, filename = "audio.wav", isAudio = false) {
     try {
         if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
@@ -139,7 +178,7 @@ export async function separateAudioBot6Items(ctx, filename = "audio.wav", isAudi
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8081/separateAudio6Items', {
+        const response = await axios.post('http://localhost:8080/separateAudio6Items', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
@@ -181,12 +220,53 @@ export async function separateAudioBot6Items(ctx, filename = "audio.wav", isAudi
     }
 }
 
+export async function separateAudioBot4Items(ctx, filename = "audio.wav", isAudio = false) {
+    try {
+        if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
+
+
+        const sessionPath = createSessionFolder(ctx)
+
+        if (!isAudio) {
+            const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
+            await downloadFile(link, `${sessionPath}/audio.wav`);
+        }
+
+        await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
+
+        const response = await axios.post('http://localhost:8080/separateAudio4Items', {
+            sessionPath: sessionPath,
+            filename: filename,
+            isAudio: isAudio,
+            userId: ctx.from.id
+        });
+
+        const newPath = path.join(sessionPath, "6s")
+        const files = await fspr.readdir(newPath);
+
+        for (let file of files) {
+            if (path.extname(file) === '.mp3') { // Сжимаем и отправляем только mp3 файлы
+                const filePath = path.join(newPath, file);
+                // await compressMp3Same(filePath, 2)
+                await ctx.sendAudio({ source: filePath });
+            }
+        }
+
+        ctx.reply("Ваше аудио разделенно на 4 части", Markup.inlineKeyboard([
+            Markup.button.callback('Меню', 'menu')
+        ]))
+
+    } catch (err) {
+        console.log(err)
+    }
+}
+
 export async function denoiseAudio(ctx, sessionPath, filename = "audio.wav", isAudio = false) {
     try {
         if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8081/denoiseAudio', {
+        const response = await axios.post('http://localhost:8080/denoiseAudio', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
