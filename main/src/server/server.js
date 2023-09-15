@@ -1,6 +1,6 @@
 import e from 'express';
 import bodyParser from 'body-parser';
-import { transformAudio, handleAICover, handleSeparateAudio, createVoice, handleSeparateAudiov2, handleSeparateAudio6Items, handleDenoiseAudio, handleSeparateAudiov3, handleSeparateAudio4Items } from '../functions.js';
+import { transformAudio, handleAICover, handleSeparateAudio, createVoice, handleSeparateAudiov2, handleSeparateAudio6Items, handleDenoiseAudio, handleSeparateAudiov3, handleSeparateAudio4Items, handleSeparateAudioInst } from '../functions.js';
 import PQueue from 'p-queue';
 
 import db, { addOperationToDatabase, deleteOperationFromDatabase, getUserOperationsCountFromDatabase } from './db.js';
@@ -263,6 +263,38 @@ app.post('/separateAudio4Items', async (req, res) => {
     console.log(`Всего запросов ${getAllQueue()}`)
 });
 
+app.post('/separateAudioInst', async (req, res) => {
+
+    const { sessionPath, filename = "audio.wav", isAudio, userId } = req.body;
+    // if (checkForMax(userId, `separateAudio`, separateAudioMaxQueue)) return
+
+    const operationId = addOperationToDatabase(req.body.userId, 'separateAudioInst');
+
+    try {
+        const { sessionPath, filename, isAudio, userId } = req.body;
+        const ctx = {
+            session: req.body.session,
+            reply: (msg) => console.log(msg),
+            sendAudio: (audio) => console.log(`Audio sent: ${audio.source}`)
+        };
+        const result = await separateAudioQueue.add(() => handleSeparateAudioInst(sessionPath, filename, isAudio));
+        console.log('Audio separation completed successfully');
+        console.log(result);
+        res.status(200).json(result);
+        deleteOperationFromDatabase(operationId);
+
+    } catch (error) {
+        console.error(`Error during audio separation: ${error}`);
+        res.status(500).json({ message: 'An error occurred while separating the audio', error: error.toString() });
+        deleteOperationFromDatabase(operationId);
+    } finally {
+        console.log(`Осталось запросов в разделении аудио ${separateAudioQueue.size}`);
+    }
+
+    console.log(`Был добавлен запрос в очередь для разделения аудио, всего запросов: ${separateAudioQueue.size + 1}`);
+    console.log(`Всего запросов ${getAllQueue()}`)
+});
+
 // separateAudioBot4Items
 
 app.post('/denoiseAudio', async (req, res) => {
@@ -299,7 +331,7 @@ app.post('/denoiseAudio', async (req, res) => {
 
 
 
-const server = app.listen(8080, () => {
+const server = app.listen(8081, () => {
     console.log(`Server is running on port ${server.address().port}`);
 });
 

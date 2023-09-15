@@ -19,7 +19,7 @@ export async function showEffectsSettings(ctx) {
         "Compress": session.compressorOn ? "Включен" : "Выключен",
       },
       "Дополнительные эффекты": {
-        "Автотюн": session.autotuneOn ? "Включен" : "Выключен",
+        "Автотюн": session.autoTune ? "Включен" : "Выключен",
         "PitchShift": session.pitchShiftOn ? "Включен" : "Выключен",
         // "Эффект телефонного звонка": session.phoneEffect ? "Включен" : "Выключен",
       },

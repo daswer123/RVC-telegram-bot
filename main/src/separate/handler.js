@@ -2,7 +2,7 @@ import { Markup } from "telegraf";
 import { createSessionFolder, is_youtube_url } from "../botFunction.js";
 import { downloadFile, downloadFromYoutube } from "../functions.js";
 import { saveSessionToDatabase } from "../server/db.js";
-import { denoiseAudio, separateAudioBot, separateAudioBot4Items, separateAudioBot6Items, separateAudioBotv2, separateAudioBotv3 } from "./botFunctios.js";
+import { denoiseAudio, separateAudioBot, separateAudioBot4Items, separateAudioBot6Items, separateAudioBotRemoveInst, separateAudioBotv2, separateAudioBotv3 } from "./botFunctios.js";
 
 export async function separateV1Hanlder(ctx) {
     try {
@@ -117,6 +117,32 @@ export async function separate4ItemsHanlder(ctx) {
 
             await separateAudioBot4Items(ctx, "audio.wav", true)
             ctx.session.waitForSeparate4Items = false
+            return
+
+        }
+
+        return Promise.resolve(false)
+    } catch (err) { console.log(err) }
+}
+
+export async function separateInstHandler(ctx) {
+    try {
+        if (ctx.session.waitForSeparateInst) {
+            if (!is_youtube_url(ctx.message.text)) {
+                ctx.reply("Неправильная ссылка на ютуб, попробуйте еще раз")
+                ctx.session.waitForSeparateInst = false
+                ctx.session.removeInstrument = ""
+                return
+            }
+            const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+            const messageId = ctx.message.message_id; // получаем уникальный идентификатор сообщения
+            const sessionPath = `sessions/${uniqueId}/${messageId}`;
+
+            await downloadFromYoutube(ctx.message.text, sessionPath);
+
+            await separateAudioBotRemoveInst(ctx, "audio.wav", true)
+            ctx.session.waitForSeparateInst = false
+            ctx.session.removeInstrument = ""
             return
 
         }

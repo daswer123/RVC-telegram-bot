@@ -23,8 +23,8 @@ import { showMenu } from "./menus/mainMenu.js";
 import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
 import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
-import { denoiseHanlder, separate4ItemsHanlder, separate6ItemsHanlder, separateV1Hanlder, separateV2Hanlder, separateV3Hanlder } from "./separate/handler.js";
-import { separateAudioBot, separateAudioBot4Items, separateAudioBot6Items, separateAudioBotv2, separateAudioBotv3 } from "./separate/botFunctios.js";
+import { denoiseHanlder, separate4ItemsHanlder, separate6ItemsHanlder, separateInstHandler, separateV1Hanlder, separateV2Hanlder, separateV3Hanlder } from "./separate/handler.js";
+import { separateAudioBot, separateAudioBot4Items, separateAudioBot6Items, separateAudioBotRemoveInst, separateAudioBotv2, separateAudioBotv3 } from "./separate/botFunctios.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -160,6 +160,7 @@ bot.on(message("text"), async (ctx) => {
       separateV3Hanlder(ctx),
       separate4ItemsHanlder(ctx),
       separate6ItemsHanlder(ctx),
+      separateInstHandler(ctx),
       handleSettings(ctx),
       ctx.session.waitForPredlog ? handlePredlog(ctx) : Promise.resolve(false),
       ctx.session.waitForPresetSave ? handlePresetSave(ctx) : Promise.resolve(false),
@@ -246,6 +247,11 @@ bot.on("audio", async (ctx) => {
 
     if (ctx.session.waitForSeparate4Items) {
       await separateAudioBot4Items(ctx)
+      return
+    }
+
+    if (ctx.session.separateInst) {
+      await separateAudioBotRemoveInst(ctx)
       return
     }
 

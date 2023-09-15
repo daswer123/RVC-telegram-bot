@@ -760,6 +760,33 @@ export async function handleSeparateAudio4Items(sessionPath, filename = "audio.w
 
 }
 
+export async function handleSeparateAudioInst(sessionPath, filename = "audio.wav", isAudio = false) {
+  try {
+    const fullSessionPath = path.join(config.get("MAIN_PATH"), sessionPath);
+    // const vocalPathh = path.join(fullSessionPath, "vocals.mp3");
+    // const instrumentalPathh = path.join(fullSessionPath, "no_vocals.mp3");
+
+    await separateAudio4Items(sessionPath, filename, "htdemucs_ft");
+
+    const newPath = path.join(sessionPath, "ft")
+    const files = await fspr.readdir(newPath);
+
+    console.log("Сжимаем файлы")
+    for (let file of files) {
+      if (path.extname(file) === '.mp3') { // Сжимаем и отправляем только mp3 файлы
+        const filePath = path.join(newPath, file);
+        await compressMp3Same(filePath, 2)
+      }
+    }
+
+
+    return
+  } catch (err) {
+    console.log(err)
+  }
+
+}
+
 
 
 export async function handleDenoiseAudio(sessionPath, filename = "audio.wav", isAudio = false) {

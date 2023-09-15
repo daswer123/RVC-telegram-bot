@@ -121,17 +121,11 @@ export function registerSettingsBotActions(bot) {
             [
                 Markup.button.callback("Sasha", "voice_yandex_sasha"),
                 Markup.button.callback("Nick", "voice_yandex_nick"),
-                Markup.button.callback("Erkannyavas", "voice_yandex_erkannyavas"),
             ],
             [
                 Markup.button.callback("Zhenya", "voice_yandex_zhenya"),
                 Markup.button.callback("Tanya", "voice_yandex_tanya"),
                 Markup.button.callback("Ermilov", "voice_yandex_ermilov"),
-            ],
-            [
-                Markup.button.callback("Anton Samokhvatov", "voice_yandex_anton_samokhvatov"),
-                Markup.button.callback("Tatyana Abramova", "voice_yandex_tatyana_abramova"),
-                Markup.button.callback("VoiceSearch", "voice_yandex_voiceSearch"),
             ],
             [
                 Markup.button.callback("Alyss", "voice_yandex_alyss"),

@@ -5,6 +5,7 @@ import axios from "axios";
 import path from "path"
 import fs from 'fs';
 import fspr from "fs/promises"
+import ffmpeg from 'fluent-ffmpeg';
 import { compressMp3, compressMp3Same, downloadFile, logUserSession } from "../functions.js";
 
 export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
@@ -26,7 +27,7 @@ export async function separateAudioBot(ctx, sessionPath, isAudio = false) {
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8080/separateAudio', {
+        const response = await axios.post('http://localhost:8081/separateAudio', {
             session: ctx.session,
             sessionPath: sessionPath,
             isAudio: isAudio,
@@ -97,7 +98,7 @@ export async function separateAudioBotv2(ctx, filename = "audio.wav", isAudio = 
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8080/separateAudiov2', {
+        const response = await axios.post('http://localhost:8081/separateAudiov2', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
@@ -139,7 +140,7 @@ export async function separateAudioBotv3(ctx, filename = "audio.wav", isAudio = 
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8080/separateAudiov3', {
+        const response = await axios.post('http://localhost:8081/separateAudiov3', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
@@ -178,7 +179,7 @@ export async function separateAudioBot6Items(ctx, filename = "audio.wav", isAudi
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8080/separateAudio6Items', {
+        const response = await axios.post('http://localhost:8081/separateAudio6Items', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
@@ -234,7 +235,7 @@ export async function separateAudioBot4Items(ctx, filename = "audio.wav", isAudi
 
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8080/separateAudio4Items', {
+        const response = await axios.post('http://localhost:8081/separateAudio4Items', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
@@ -261,12 +262,87 @@ export async function separateAudioBot4Items(ctx, filename = "audio.wav", isAudi
     }
 }
 
+export async function separateAudioBotRemoveInst(ctx, filename = "audio.wav", isAudio = false) {
+    try {
+        if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
+
+
+        const sessionPath = createSessionFolder(ctx)
+        let instrument = ctx.session.removeInstrument
+
+        if (!isAudio) {
+            const link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
+            await downloadFile(link, `${sessionPath}/audio.wav`);
+        }
+
+        await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
+
+        if (instrument == "bass" || instrument == "drums") {
+            const response = await axios.post('http://localhost:8081/separateAudio4Items', {
+                sessionPath: sessionPath,
+                filename: filename,
+                isAudio: isAudio,
+                userId: ctx.from.id
+            });
+
+        } else {
+            const response = await axios.post('http://localhost:8081/separateAudio6Items', {
+                sessionPath: sessionPath,
+                filename: filename,
+                isAudio: isAudio,
+                userId: ctx.from.id
+            });
+        }
+
+        instrument += ".mp3"
+
+        const newPath = path.join(sessionPath, "6s")
+        const files = await fspr.readdir(newPath);
+
+
+        let command = ffmpeg();
+
+        // Замените mergedFilePath на путь и имя итогового файла
+        const mergedFilePath = 'ready.mp3';
+
+        for (let file of files) {
+            if (path.extname(file) === '.mp3' && file !== instrument) {
+                const filePath = path.join(newPath, file);
+                command = command.input(filePath);
+            }
+        }
+
+        command
+            .complexFilter([
+                {
+                    filter: 'amix', options: { inputs: files.length - 1, duration: 'longest' }
+                }
+            ])
+            .on('error', function (err) {
+                console.log('An error occurred: ' + err.message);
+            })
+            .on('end', async function () {
+                console.log('Merging finished !');
+
+                // Отправка итогового аудиофайла
+                await ctx.replyWithAudio({ source: mergedFilePath });
+                await ctx.reply(`Ваш трек, но без инструмента: ${instrument}`, Markup.inlineKeyboard([
+                    Markup.button.callback('Меню', 'menu')
+                ]));
+            })
+            .save(mergedFilePath);
+
+    } catch (err) {
+        console.log(err)
+    }
+}
+
 export async function denoiseAudio(ctx, sessionPath, filename = "audio.wav", isAudio = false) {
     try {
         if (checkForLimits(ctx, "separateAudio", separateAudioMaxQueue)) return
         await ctx.reply("Ваш запрос на разделение аудио был добавлен в очередь, ожидайте.\nТекущую очередь вы можете увидеть по команде /pos")
 
-        const response = await axios.post('http://localhost:8080/denoiseAudio', {
+        const response = await axios.post('http://localhost:8081/denoiseAudio', {
             sessionPath: sessionPath,
             filename: filename,
             isAudio: isAudio,
