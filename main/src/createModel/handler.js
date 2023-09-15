@@ -54,35 +54,36 @@ export async function handleMissingModel(ctx) {
 }
 
 export async function handleCreateModelVoice(ctx) {
-    if (ctx.session.waitForVoice) {
-        const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
-        const folderName = ctx.session.voiceModelName
-        let voicePath = `train_voice/${uniqueId}/${folderName}`;
 
-        // создаем папку сессии, если она еще не существует
-        if (!fs.existsSync(voicePath)) {
-            fs.mkdirSync(voicePath, { recursive: true });
-        }
+    const uniqueId = ctx.from.id; // получаем уникальный идентификатор пользователя
+    const folderName = ctx.session.voiceModelName
+    let voicePath = `train_voice/${uniqueId}/${folderName}`;
 
-        const date = new Date();
-        const timestamp = date.toISOString().replace(/[:.]/g, '-');
-
-        let link = await ctx.telegram.getFileLink(ctx.message.voice.file_id);
-        if (!link) {
-            link = await ctx.telegram.getFileLink(ctx.message.audio.file_id);
-        }
-
-        await downloadFile(link, `${voicePath}/${timestamp}-audio.mp3`);
-        ctx.reply("Ваш образец был добавлен в часть вашего набора данных", Markup.inlineKeyboard([
-            [
-                Markup.button.callback('Добавить ещё', 'create_voice_add_sample'),
-                Markup.button.callback('Получить текст', 'create_voice_random_text')
-            ],
-            [
-                Markup.button.callback('Меню', 'show_create_voice_menu')
-            ]
-        ]))
-        ctx.session.waitForVoice = false;
-        return
+    // создаем папку сессии, если она еще не существует
+    if (!fs.existsSync(voicePath)) {
+        fs.mkdirSync(voicePath, { recursive: true });
     }
+
+    const date = new Date();
+    const timestamp = date.toISOString().replace(/[:.]/g, '-');
+
+    let link
+    if (ctx.message.voice || ctx.message.audio) {
+        link = await ctx.telegram.getFileLink((ctx.message.voice || ctx.message.audio).file_id);
+    }
+
+
+    await downloadFile(link, `${voicePath}/${timestamp}-audio.mp3`);
+    ctx.reply("Ваш образец был добавлен в часть вашего набора данных", Markup.inlineKeyboard([
+        [
+            Markup.button.callback('Добавить ещё', 'create_voice_add_sample'),
+            Markup.button.callback('Получить текст', 'create_voice_random_text')
+        ],
+        [
+            Markup.button.callback('Меню', 'show_create_voice_menu')
+        ]
+    ]))
+    ctx.session.waitForVoice = false;
+    return
+    // }
 }

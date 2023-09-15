@@ -33,12 +33,21 @@ def main():
     parser.add_argument('output', help='Path to the output audio file.')
     parser.add_argument('attack', type=float, default=0.1, nargs='?', help='The attack of the tuning effect.')
     parser.add_argument('strength', type=float, default=0.9, nargs='?', help='The strength of the tuning effect.')
+    parser.add_argument('mode', default='auto', nargs='?', help='Mode to determine scale and key. If set to manual, use provided scale and key.')
+    parser.add_argument('scale', default="major", nargs='?', help='Scale to apply if mode is manual.')
+    parser.add_argument('key', default="C", nargs='?', help='Key to apply if mode is manual.')
 
     args = parser.parse_args()
 
-    # Определение ключа и масштаба инструментала
-    key = estimate_key(args.instrumental)
-    scale = estimate_scale(args.instrumental)
+    if args.mode == 'manual':
+        if not args.scale or not args.key:
+            raise ValueError("Scale and key must be provided when mode is manual.")
+        key = args.key
+        scale = args.scale
+    else:
+        # Определение ключа и масштаба инструментала
+        key = estimate_key(args.instrumental)
+        scale = estimate_scale(args.instrumental)
 
     # Загрузка и преобразование аудиофайла в моно
     y, sr = librosa.load(args.vocal, sr=None, mono=True, offset=0.0, duration=None, dtype=np.float32, res_type='kaiser_best')

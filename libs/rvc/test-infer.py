@@ -39,13 +39,13 @@ class Config:
                 print("16系/10系显卡和P40强制单精度")
                 self.is_half = False
                 for config_file in ["32k.json", "40k.json", "48k.json"]:
-                    with open(f"../libs/rvc/configs/{config_file}", "r") as f:
+                    with open(f"configs/{config_file}", "r") as f:
                         strr = f.read().replace("true", "false")
                     with open(f"configs/{config_file}", "w") as f:
                         f.write(strr)
-                with open("../libs/rvc/trainset_preprocess_pipeline_print.py", "r") as f:
+                with open("trainset_preprocess_pipeline_print.py", "r") as f:
                     strr = f.read().replace("3.7", "3.0")
-                with open("../libs/rvc/trainset_preprocess_pipeline_print.py", "w") as f:
+                with open("trainset_preprocess_pipeline_print.py", "w") as f:
                     f.write(strr)
             else:
                 self.gpu_name = None
@@ -57,9 +57,9 @@ class Config:
                 + 0.4
             )
             if self.gpu_mem <= 4:
-                with open("../libs/rvc/trainset_preprocess_pipeline_print.py", "r") as f:
+                with open("trainset_preprocess_pipeline_print.py", "r") as f:
                     strr = f.read().replace("3.7", "3.0")
-                with open("../libs/rvc/trainset_preprocess_pipeline_print.py", "w") as f:
+                with open("trainset_preprocess_pipeline_print.py", "w") as f:
                     f.write(strr)
         elif torch.backends.mps.is_available():
             print("没有发现支持的N卡, 使用MPS进行推理")

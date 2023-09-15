@@ -24,7 +24,7 @@ import { handlePresetSave } from "./presets/handler.js";
 import { handleSettings } from "./settings/handler.js";
 import { clearOperationsDatabase, getSessionFromDatabase, getUserFromDatabase, saveSessionToDatabase, saveUserToDatabase } from "./server/db.js";
 import { denoiseHanlder, separate4ItemsHanlder, separate6ItemsHanlder, separateV1Hanlder, separateV2Hanlder, separateV3Hanlder } from "./separate/handler.js";
-import { separateAudioBot, separateAudioBot6Items, separateAudioBotv2 } from "./separate/botFunctios.js";
+import { separateAudioBot, separateAudioBot4Items, separateAudioBot6Items, separateAudioBotv2, separateAudioBotv3 } from "./separate/botFunctios.js";
 
 // Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -188,7 +188,11 @@ bot.on("voice", async (ctx) => {
   if (await checkForBan(ctx)) return
 
   try {
-    handleCreateModelVoice(ctx)
+    if (ctx.session.waitForVoice) {
+      handleCreateModelVoice(ctx)
+      ctx.session.waitForVoice = false;
+      return
+    }
     handleTestVoices(ctx)
 
     processAudioMessage(ctx)
@@ -208,7 +212,11 @@ bot.on("audio", async (ctx) => {
 
   try {
 
-    handleCreateModelVoice(ctx)
+    if (ctx.session.waitForVoice) {
+      handleCreateModelVoice(ctx)
+      ctx.session.waitForVoice = false;
+      return
+    }
 
     if (ctx.session.waitForDenoise) {
       denoiseHanlder(ctx)
@@ -226,8 +234,18 @@ bot.on("audio", async (ctx) => {
       return
     }
 
+    if (ctx.session.waitForSeparatev3) {
+      await separateAudioBotv3(ctx)
+      return
+    }
+
     if (ctx.session.waitForSeparate6Items) {
       await separateAudioBot6Items(ctx)
+      return
+    }
+
+    if (ctx.session.waitForSeparate4Items) {
+      await separateAudioBot4Items(ctx)
       return
     }
 

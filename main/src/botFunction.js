@@ -294,16 +294,24 @@ async function handleAudio(ctx, sessionPath, audioPath = '', isAudio = false, me
   }
   // console.log(ctx, "popa", audioPath)
   await tranformAudioServer(ctx, sessionPath, audioPath, true)
+
+  let vocalPath = path.join(sessionPath, "audio_out.mp3")
+  let vocalString = `audio_out_cut.mp3`
+
+  if (ctx.session.autotune_mode === "manual") {
+    [vocalPath, vocalString] = await autotuneAudio(ctx, sessionPath, "audio_out_cut.mp3", "manual")
+  }
+
   await logUserSession(ctx, "transformAudio", logInfo)
 
   await ctx.sendChatAction("upload_audio");
 
 
   if (ctx.session.chorusOn || ctx.session.reverbOn || ctx.session.delayOn || ctx.session.pitchShiftOn || ctx.session.compressorOn) {
-    await improveAudiov2(ctx, sessionPath, "audio_out_cut.mp3");
+    await improveAudiov2(ctx, sessionPath, vocalString);
     audioSource = `${sessionPath}/audio_out_improve.mp3`;
   } else {
-    audioSource = `${sessionPath}/audio_out_cut.mp3`;
+    audioSource = `${sessionPath}/${vocalString}`;
   }
 
 

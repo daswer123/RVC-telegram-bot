@@ -493,29 +493,48 @@ export const addEchoEffect = async (ctx, sessionPath, filename) => {
 
 }
 
-export const autotuneAudio = async (ctx, sessionPath, filename) => {
-  let mp3Path = `${sessionPath}/${filename}`;
-  let instrumentPath = `${sessionPath}/instrumental.mp3`;
+export const autotuneAudio = async (ctx, sessionPath, filename, mode = "auto") => {
+  try {
+    let mp3Path = `${sessionPath}/${filename}`;
+    let instrumentPath
 
-  const attack = ctx.session.autotune_attack
-  const strength = ctx.session.autotune_strength
 
-  let optionss = {
-    mode: 'text',
-    pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
-    pythonOptions: ['-u'], // get print results in real-time
-    scriptPath: config.get("AUDIO_SEP_PATH"),
-    args: [
-      instrumentPath,
-      mp3Path,
-      `${sessionPath}/autotune_vocal.mp3`,
-      attack,
-      strength
-    ]
-  };
+    const attack = ctx.session.autotune_attack
+    const strength = ctx.session.autotune_strength
+    // const mode = ctx.session.autotune_mode
+    const scale = ctx.session.autotune_scale
+    const key = ctx.session.autotune_note
 
-  const messages = await PythonShell.run('autotune.py', optionss)
-  return messages
+    if (mode === "auto") {
+      instrumentPath = `${sessionPath}/instrumental.mp3`;
+    }
+
+    let optionss = {
+      mode: 'text',
+      pythonPath: config.get("PYTHON_VENV_SEP_PATH"),
+      pythonOptions: ['-u'], // get print results in real-time
+      scriptPath: config.get("AUDIO_SEP_PATH"),
+      args: [
+        instrumentPath,
+        mp3Path,
+        `${sessionPath}/autotune_vocal.mp3`,
+        attack,
+        strength,
+        mode,
+        scale,
+        key
+      ]
+    };
+
+    const messages = await PythonShell.run('autotune.py', optionss)
+
+    const vocalPath = `${sessionPath}/autotune_vocal.mp3`
+    const vocalString = "autotune_vocal.mp3"
+
+    return [vocalPath, vocalString]
+  } catch (err) {
+    console.log(err)
+  }
 
 }
 
@@ -817,13 +836,13 @@ export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
   await transformAudio(ctx, sessionPath, vocalPathDeEcho, true);
 
   if (ctx.session.autoTune) {
-    await autotuneAudio(ctx, sessionPath, vocalFileName)
+    await autotuneAudio(ctx, sessionPath, vocalFileName, ctx.session.autotune_mode)
     sessionOutputPath = path.join(fullSessionPath, "autotune_vocal.mp3");
   }
 
   if (ctx.session.chorusOn || ctx.session.reverbOn || ctx.session.delayOn || ctx.session.pitchShiftOn || ctx.session.compressorOn) {
     sessionOutputPath = path.join(fullSessionPath, "autotune_vocal.mp3");
-    ctx.session.voice_volume += 0.5
+    // ctx.session.voice_volume += 0.5
 
     // Проверьте, существует ли файл
     if (!fs.existsSync(sessionOutputPath)) {
@@ -835,6 +854,10 @@ export async function handleAICover(ctx, sessionPath, filename = "audio.wav") {
       sessionOutputPath = path.join(sessionPath, "audio_out_improve.mp3");
     }
   }
+
+  // if (vocalPathDeEcho === "audio_out_improve.mp3") {
+  vocalPathDeEcho = vocalPath
+  // }
 
   await mergeAudioFilesToMp3(sessionOutputPath, instrumentalPath, resultPath, ctx);
   return { vocalPathDeEcho, sessionOutputPath, instrumentalPath, resultPath };
