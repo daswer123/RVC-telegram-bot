@@ -63,4 +63,5 @@ https://github.com/daswer123/RVC-telegram-bot/assets/22278673/ce3895d2-3208-470c
 3) [Silero TTS](https://github.com/snakers4/silero-models) - TTS на русском языке
 4) [doremi](https://github.com/jpmchargue/doremi) - Библеотека для автотюна
 5) [pedalboard](https://github.com/spotify/pedalboard) - Библеотека эффектов
+6) [Demucs](https://github.com/facebookresearch/demucs) - Разделение аудио на вокал и инструментал
 
