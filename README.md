@@ -25,7 +25,7 @@ https://huggingface.co/Daswer123/rvc_big_voice_pack
 
 ## DEMO ( Turn Sound on )
 
-https://github.com/daswer123/tg_rvc_bot/assets/22278673/9167b08e-87f5-40ce-b569-3a446b1ecb55
+https://github.com/daswer123/RVC-telegram-bot/assets/22278673/ce3895d2-3208-470c-85f8-f59496cd8185
 
 ## TODO
 - [x] Разбить код на модули
@@ -40,13 +40,14 @@ https://github.com/daswer123/tg_rvc_bot/assets/22278673/9167b08e-87f5-40ce-b569-
 2) Создаете бота в botFather
 3) клонируете этот репозиторий
 4) Запускаете `install.bat` в корневой папке
-5) Как только загрузка закончилась заходите в папку utils и запускаете `create main config.bat`, вам нужно будет указать ваш ключ к боту
+5) Пропускайте этот пункт, если вы не используете Portable. Запустите `update_path.bat` в корневой папке
+6) Как только загрузка закончилась заходите в папку utils и запускаете `create main config.bat`, вам нужно будет указать ваш ключ к боту
 6) Далее вы должны сформировать структуру ваших голосовых моделей, зайдите в папку MODELS и прочитайте [Readme](https://github.com/daswer123/tg_rvc_bot/tree/main/MODELS#readme), там указана примерная структура папок которая должна быть
    
 ![image](https://github.com/daswer123/tg_rvc_bot/assets/22278673/713ed830-cf18-4e3f-a4bf-6812b7d3dcdd)
 
-6) Как вы создадите структуру голосовых моделей, запустите скрипт `create characters config.bat` в папке `utils`
-7) Все готово! теперь запускайте `start.bat` и начинайте работать с ботом
+7) Как вы создадите структуру голосовых моделей, запустите скрипт `create characters config.bat` в папке `utils`
+8) Все готово! теперь запускайте `start.bat` и начинайте работать с ботом
 
 # Примечания по работе бота
 1) Как только добавите нового персонажа,  не забудьте снова запустить скрипт `create characters config.bat` в папке `utils`
