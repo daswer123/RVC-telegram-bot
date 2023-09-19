@@ -27,6 +27,12 @@ https://huggingface.co/Daswer123/rvc_big_voice_pack
 
 https://github.com/daswer123/RVC-telegram-bot/assets/22278673/ce3895d2-3208-470c-85f8-f59496cd8185
 
+## Improved Verison ( Turn Sound on )
+
+https://github.com/daswer123/RVC-telegram-bot/assets/22278673/4dba270d-3aa1-4a3f-9fe8-893820ce18d1
+
+Свяжитесь со мной если вас заинтересовала эта версия
+
 ## TODO
 - [x] Разбить код на модули
 - [x] Отделить серверную часть и бота
