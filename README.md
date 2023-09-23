@@ -31,9 +31,11 @@ https://github.com/daswer123/RVC-telegram-bot/assets/22278673/ce3895d2-3208-470c
 
 ## Improved Verison ( Turn Sound on )
 
+![image](https://github.com/daswer123/RVC-telegram-bot/assets/22278673/7098f31c-c6f3-40c5-ab19-c6ac53506516)
+
 https://github.com/daswer123/RVC-telegram-bot/assets/22278673/4dba270d-3aa1-4a3f-9fe8-893820ce18d1
 
-Свяжитесь со мной если вас заинтересовала эта версия
+Свяжитесь со мной если вас заинтересовала эта версия https://t.me/daswer123
 
 ## TODO
 - [x] Разбить код на модули
