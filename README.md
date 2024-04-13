@@ -21,7 +21,7 @@ https://huggingface.co/Daswer123/rvc_big_voice_pack
 - Новые методы преобразования: Mangio-crepe, rmvpe и rmvpe+
 - Возможность контролировать нагрузку и максимальное кол-во запросов в очереди
 
-**Существует портативная версия бота, с уже установленными библиотеками [Portable TG RVC Bot](https://huggingface.co/Daswer123/RVC_TG_BOT/tree/main)**
+**Существует портативная версия бота, с уже установленными библиотеками [Portable TG RVC Bot](https://huggingface.co/daswer123/RVC-big-ru-voice-pack/tree/main)**
 Как только скачаете портативную версию, запустите update_path.bat и начните с пунка 5 в [Гайде по установке](https://github.com/daswer123/tg_rvc_bot/edit/main/README.md#гайд-по-установке)
 В качестве бонуса в портативной версии, уже установленно несколько голосов для теста.
 
